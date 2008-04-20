@@ -1,0 +1,77 @@
+/*
+ * arch/microblaze/lib/memset.c
+ *
+ * Copyright (C) 2008 Michal Simek <monstr@monstr.eu>
+ *
+ * Reasonably optimised generic C-code for memset on Microblaze
+ * This is generic C code to do efficient, alignment-aware memcpy.
+ *
+ * It is based on demo code originally Copyright 2001 by Intel Corp, taken from
+ * http://www.embedded.com/showArticle.jhtml?articleID=19205567
+ *
+ * Attempts were made, unsuccesfully, to contact the original
+ * author of this code (Michael Morrow, Intel).  Below is the original
+ * copyright notice.
+ *
+ * This software has been developed by Intel Corporation.
+ * Intel specifically disclaims all warranties, express or
+ * implied, and all liability, including consequential and
+ * other indirect damages, for the use of this program, including
+ * liability for infringement of any proprietary rights,
+ * and including the warranties of merchantability and fitness
+ * for a particular purpose. Intel does not assume any
+ * responsibility for and errors which may appear in this program
+ * not any responsibility to update it.
+ */
+
+#include <linux/types.h>
+#include <linux/stddef.h>
+#include <linux/compiler.h>
+#include <linux/module.h>
+
+#include <asm/string.h>
+
+#ifdef __HAVE_ARCH_MEMSET
+void *memset(void *v_src, int c, __kernel_size_t n)
+{
+	char *src = v_src;
+	uint32_t *i_src;
+	uint32_t w32;
+
+	/* Truncate c to 8 bits */
+	w32 = c = (c & 0xFF);
+
+	/* Make a repeating word out of it */
+	w32 |= w32 << 8;
+	w32 |= w32 << 8;
+	w32 |= w32 << 8;
+
+	if (n >= 4) {
+		/* Align the destination to a word boundary */
+		/* This is done in an endian independant manner */
+		switch ((unsigned) src & 3) {
+		case 1: *src++ = c;
+			--n;
+		case 2: *src++ = c;
+			--n;
+		case 3: *src++ = c;
+			--n;
+		}
+
+		i_src  = (void *)src;
+
+		/* Do as many full-word copies as we can */
+		for (; c >= 4; c -= 4)
+			*i_src++ = w32;
+
+		src  = (void *)i_src;
+	}
+
+	/* Finish off the rest as byte sets */
+	while (n--)
+		*src++ = c;
+
+	return v_src;
+}
+EXPORT_SYMBOL(memset);
+#endif /* __HAVE_ARCH_MEMSET */
