@@ -1,0 +1,52 @@
+# For a description of the syntax of this configuration file,
+# see Documentation/kbuild/kconfig-language.txt.
+#
+# Platform Kconfig menu for Microblaze generic board
+#
+
+comment "Definitions for MICROBLAZE0"
+	depends on ALLOW_EDIT_AUTO
+
+config KERNEL_BASE_ADDR
+	hex "Physical address where Linux Kernel is"
+	default "0x44000000"
+	help
+	  BASE Address for kernel
+
+config XILINX_ERAM_SIZE
+	hex "Memory size of XILINX_RAM"
+	depends on XILINX_UNCACHED_SHADOW
+	default 0x02000000
+
+config XILINX_MICROBLAZE0_FAMILY
+	string "Targetted FPGA family" if ALLOW_EDIT_AUTO
+	default spartan3e
+
+config XILINX_MICROBLAZE0_HW_VER
+	string "Core version number" if ALLOW_EDIT_AUTO
+	default 5.00.c
+
+config XILINX_MICROBLAZE0_USE_MSR_INSTR
+	int "USE_MSR_INSTR" if ALLOW_EDIT_AUTO
+	default 1
+	range 0 1
+
+config XILINX_MICROBLAZE0_USE_BARREL
+	int "USE_BARREL" if ALLOW_EDIT_AUTO
+	default 1
+	range 0 1
+
+config XILINX_MICROBLAZE0_USE_DIV
+	int "USE_DIV" if ALLOW_EDIT_AUTO
+	default 1
+	range 0 1
+
+config XILINX_MICROBLAZE0_USE_HW_MUL
+	int "USE_HW_MUL" if ALLOW_EDIT_AUTO
+	default 1
+	range 0 2
+
+config XILINX_MICROBLAZE0_USE_FPU
+	int "USE_FPU" if ALLOW_EDIT_AUTO
+	default 0
+	range 0 1
