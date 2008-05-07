@@ -1,0 +1,143 @@
+# For a description of the syntax of this configuration file,
+# see Documentation/kbuild/kconfig-language.txt.
+
+mainmenu "Linux/Microblaze Kernel Configuration"
+
+config MICROBLAZE
+	def_bool y
+	select HAVE_LMB
+
+config MMU
+	def_bool n
+
+config SWAP
+	def_bool n
+
+config RWSEM_GENERIC_SPINLOCK
+	def_bool y
+
+config RWSEM_XCHGADD_ALGORITHM
+	bool
+
+config ARCH_HAS_ILOG2_U32
+	def_bool n
+
+config ARCH_HAS_ILOG2_U64
+	def_bool n
+
+config GENERIC_FIND_NEXT_BIT
+	def_bool y
+
+config GENERIC_HWEIGHT
+	def_bool y
+
+config GENERIC_HARDIRQS
+	def_bool y
+
+config GENERIC_IRQ_PROBE
+	def_bool y
+
+config GENERIC_CALIBRATE_DELAY
+	def_bool y
+
+config PCI
+	def_bool n
+
+config NO_DMA
+	def_bool y
+
+config GENERIC_CSUM
+	def_bool y
+
+config UID16
+	def_bool y
+
+config HZ
+	int
+	default 100
+
+config DEFCONFIG_LIST
+	string
+	default "arch/$ARCH/defconfig"
+
+source "init/Kconfig"
+
+source "arch/microblaze/platform/Kconfig.platform"
+
+menu "Processor type and features"
+
+config PREEMPT
+	bool "Preemptible Kernel"
+	help
+	  This option reduces the latency of the kernel when reacting to
+	  real-time or interactive events by allowing a low priority process to
+	  be preempted even if it is in kernel mode executing a system call.
+	  This allows applications to run more reliably even when the system is
+	  under load.
+
+	  Say Y here if you are building a kernel for a desktop, embedded
+	  or real-time system.  Say N if you are unsure.
+
+config PREEMPT_TIMES
+	bool "Collect preemption latency times"
+	depends on PREEMPT
+	help
+	  Allow collection for preemption latency times.
+
+config LARGE_ALLOCS
+	bool "Allow allocating large blocks (> 1MB) of memory"
+	help
+	  Allow the slab memory allocator to keep chains for very large
+	  memory sizes - up to 32MB. You may need this if your system has
+	  a lot of RAM, and you need to able to allocate very large
+	  contiguous chunks. If unsure, say N.
+
+comment "Boot options"
+
+config CMDLINE
+	string "Default kernel command string"
+	default ""
+	help
+	  On some architectures there is currently no way for the boot loader
+	  to pass arguments to the kernel. For these architectures, you should
+	  supply some command-line options at build time by entering them
+	  here.
+
+config CMDLINE_FORCE
+	bool "Force default kernel command string"
+	help
+	  Set this to have arguments from the default kernel command string
+	  override those passed by the boot loader.
+
+config OF
+	def_bool y
+
+config OF_DEVICE
+	def_bool y
+
+endmenu
+
+config APM_EMULATION
+	bool
+
+source "mm/Kconfig"
+
+menu "Exectuable file formats"
+
+source "fs/Kconfig.binfmt"
+
+endmenu
+
+source "net/Kconfig"
+
+source "drivers/Kconfig"
+
+source "fs/Kconfig"
+
+source "arch/microblaze/Kconfig.debug"
+
+source "security/Kconfig"
+
+source "crypto/Kconfig"
+
+source "lib/Kconfig"

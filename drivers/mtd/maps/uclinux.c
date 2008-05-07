@@ -16,6 +16,7 @@
 #include <linux/kernel.h>
 #include <linux/fs.h>
 #include <linux/major.h>
+#include <linux/root_dev.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/map.h>
 #include <linux/mtd/partitions.h>
@@ -52,6 +53,36 @@ int uclinux_point(struct mtd_info *mtd, loff_t from, size_t len,
 
 /****************************************************************************/
 
+inline unsigned get_rootfs_len(unsigned *addr)
+{
+        if (memcmp(&addr[0], "-rom1fs-", 8) == 0)       /* romfs */
+                return be32_to_cpu(addr[2]);
+        else if(addr[0] == le32_to_cpu(0x28cd3d45)) /* cramfs */
+                return le32_to_cpu(addr[1]);
+        return 0;
+}
+
+/****************************************************************************/
+/*
+ * Find the MTD device with the given name
+ */
+
+static struct mtd_info *get_mtd_named(char *name)
+{
+	int i;
+	struct mtd_info *mtd;
+
+	for (i = 0; i < MAX_MTD_DEVICES; i++) {
+		mtd = get_mtd_device(NULL, i);
+		if (mtd) {
+			if (strcmp(mtd->name, name) == 0)
+				return(mtd);
+			put_mtd_device(mtd);
+		}
+	}
+	return(NULL);
+}
+
 int __init uclinux_mtd_init(void)
 {
 	struct mtd_info *mtd;
@@ -61,7 +92,7 @@ int __init uclinux_mtd_init(void)
 
 	mapp = &uclinux_ram_map;
 	mapp->phys = addr;
-	mapp->size = PAGE_ALIGN(ntohl(*((unsigned long *)(addr + 8))));
+	mapp->size = PAGE_ALIGN(get_rootfs_len((unsigned *)addr));
 	mapp->bankwidth = 4;
 
 	printk("uclinux[mtd]: RAM probe address=0x%x size=0x%x\n",
@@ -89,6 +120,13 @@ int __init uclinux_mtd_init(void)
 
 	uclinux_ram_mtdinfo = mtd;
 	add_mtd_partitions(mtd, uclinux_romfs, NUM_PARTITIONS);
+	mtd = get_mtd_named(uclinux_romfs[0].name);
+	if(mtd) {
+		printk("uclinux[mtd]: set %s to be root filesystem index=%d\n",
+	     		uclinux_romfs[0].name, mtd->index);
+		ROOT_DEV = MKDEV(MTD_BLOCK_MAJOR, mtd->index);
+		put_mtd_device(mtd);
+	}
 
 	return(0);
 }

@@ -134,11 +134,11 @@ static long lmb_add_region(struct lmb_region *rgn, u64 base, u64 size)
 	unsigned long coalesced = 0;
 	long adjacent, i;
 
-	if ((rgn->cnt == 1) && (rgn->region[0].size == 0)) {
+/*	if ((rgn->cnt == 1) && (rgn->region[0].size == 0)) {
 		rgn->region[0].base = base;
 		rgn->region[0].size = size;
 		return 0;
-	}
+	}*/
 
 	/* First try and coalesce this LMB with another. */
 	for (i = 0; i < rgn->cnt; i++) {

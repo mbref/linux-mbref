@@ -78,7 +78,7 @@
  *    - Request major number from lanana
  */
 
-#undef DEBUG
+#define DEBUG
 
 #include <linux/module.h>
 #include <linux/ctype.h>
