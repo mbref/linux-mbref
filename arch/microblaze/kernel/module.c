@@ -27,7 +27,8 @@ void *module_alloc(unsigned long size)
 
 void module_free(struct module *module, void *region)
 {
-	pr_debug("module_free(%s,%08lx)\n", module->name, region);
+	pr_debug("module_free(%s,%08lx)\n", module->name,
+					(unsigned long)region);
 	vfree(region);
 }
 

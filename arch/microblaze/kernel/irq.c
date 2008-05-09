@@ -40,13 +40,15 @@ void ack_bad_irq(unsigned int irq)
 void do_IRQ(struct pt_regs *regs)
 {
 	unsigned int irq;
+	struct irq_desc *desc;
 
 	irq_enter();
 	set_irq_regs(regs);
 	irq = get_irq(regs);
 	BUG_ON(irq == -1U);
-	__do_IRQ(irq);
-
+	desc = irq_desc + irq;
+	desc->handle_irq(irq, desc);
+	desc->chip->end(irq);
 	irq_exit();
 }
 
