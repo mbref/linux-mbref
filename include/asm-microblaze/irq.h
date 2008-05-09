@@ -15,8 +15,7 @@
 #define NR_IRQS 32
 #include <linux/irq.h>
 
-extern unsigned int NR_IRQ;
-extern void ledoff(void);
+extern unsigned int nr_irq;
 
 #define NO_IRQ (-1)
 

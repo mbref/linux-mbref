@@ -1,5 +1,5 @@
 /*
- * arch/microblaze/kernel/process.c
+ * arch/microblaze/kernel/irq.c
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License. See the file "COPYING" in the main directory of this archive
@@ -65,7 +65,7 @@ int show_interrupts(struct seq_file *p, void *v)
 		seq_putc(p, '\n');
 	}
 
-	if (i < NR_IRQ) {
+	if (i < nr_irq) {
 		spin_lock_irqsave(&irq_desc[i].lock, flags);
 		action = irq_desc[i].action;
 		if (!action)
@@ -91,10 +91,3 @@ skip:
 	}
 	return 0;
 }
-
-/*unsigned int irq_of_parse_and_map(struct device_node *dev, int index)
-{
-	printk ("ERROR %s\n",__FUNCTION__);
-	return 0;
-}
-EXPORT_SYMBOL_GPL(irq_of_parse_and_map);*/

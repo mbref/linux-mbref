@@ -24,8 +24,10 @@
 
 #ifdef CONFIG_SELFMOD_TIMER
 #include <asm/selfmod.h>
+#define TIMER_BASE	BARRIER_BASE_ADDR
 #else
 static unsigned int timer_baseaddr;
+#define TIMER_BASE	timer_baseaddr
 #endif
 
 #define TCSR0	(0x00)
@@ -49,11 +51,7 @@ static unsigned int timer_baseaddr;
 
 static void timer_ack(void)
 {
-#ifdef CONFIG_SELFMOD_TIMER
-	iowrite32(ioread32(HACK_BASE_ADDR + TCSR0), HACK_BASE_ADDR + TCSR0);
-#else
-	iowrite32(ioread32(timer_baseaddr + TCSR0), timer_baseaddr + TCSR0);
-#endif
+	iowrite32(ioread32(TIMER_BASE + TCSR0), TIMER_BASE + TCSR0);
 }
 
 irqreturn_t timer_interrupt(int irq, void *dev_id)
@@ -82,19 +80,11 @@ static struct irqaction timer_irqaction = {
 
 unsigned long do_gettimeoffset(void)
 {
-#ifdef CONFIG_SELFMOD_TIMER
 	/* Current counter value */
-	unsigned int tcr = ioread32(HACK_BASE_ADDR + TCR0);
+	unsigned int tcr = ioread32(TIMER_BASE + TCR0);
 
 	/* Load register value (couting down */
-	unsigned int tcmp = ioread32(HACK_BASE_ADDR + TLR0);
-#else
-	/* Current counter value */
-	unsigned int tcr = ioread32(timer_baseaddr + TCR0);
-
-	/* Load register value (couting down */
-	unsigned int tcmp = ioread32(timer_baseaddr + TLR0);
-#endif
+	unsigned int tcmp = ioread32(TIMER_BASE + TLR0);
 
 	/* Offset, in nanoseconds */
 	/* FIXME remove loading from structure - build in is faster */
@@ -132,7 +122,7 @@ void system_timer_init(void)
 	timer_baseaddr = (unsigned long) ioremap(timer_baseaddr, PAGE_SIZE);
 	irq = *(int *) of_get_property(timer, "interrupts", NULL);
 #ifdef CONFIG_SELFMOD_TIMER
-	function_hack((int *) arr_func, timer_baseaddr);
+	selfmod_function((int *) arr_func, timer_baseaddr);
 #endif
 	printk(KERN_INFO "%s #0 at 0x%08x, irq=%d\n",
 		timer_list[j], timer_baseaddr, irq);

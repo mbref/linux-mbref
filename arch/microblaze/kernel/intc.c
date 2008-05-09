@@ -19,11 +19,13 @@
 
 #ifdef CONFIG_SELFMOD_INTC
 #include <asm/selfmod.h>
+#define INTC_BASE	BARRIER_BASE_ADDR
 #else
 static unsigned int intc_baseaddr;
+#define INTC_BASE	intc_baseaddr
 #endif
 
-unsigned int NR_IRQ;
+unsigned int nr_irq;
 
 /* No one else should require these constants, so define them locally here. */
 #define ISR 0x00			/* Interrupt Status Register */
@@ -42,39 +44,24 @@ static void intc_enable(unsigned int irq)
 {
 	unsigned int mask = (0x00000001 << (irq & 31));
 	pr_debug("enable: %d\n", irq);
-#ifdef CONFIG_SELFMOD_INTC
-	iowrite32(mask, HACK_BASE_ADDR + SIE);
-#else
-	iowrite32(mask, intc_baseaddr + SIE);
-#endif
+	iowrite32(mask, INTC_BASE + SIE);
 }
 
 static void intc_disable(unsigned int irq)
 {
 	unsigned long mask = (0x00000001 << (irq & 31));
 	pr_debug("disable: %d\n", irq);
-#ifdef CONFIG_SELFMOD_INTC
-	iowrite32(mask, HACK_BASE_ADDR + CIE);
-#else
-	iowrite32(mask, intc_baseaddr + CIE);
-#endif
+	iowrite32(mask, INTC_BASE + CIE);
 }
 
 static void intc_disable_and_ack(unsigned int irq)
 {
 	unsigned long mask = (0x00000001 << (irq & 31));
 	pr_debug("disable_and_ack: %d\n", irq);
-#ifdef CONFIG_SELFMOD_INTC
-	iowrite32(mask, HACK_BASE_ADDR + CIE);
+	iowrite32(mask, INTC_BASE + CIE);
 	/* ack edge triggered intr */
 	if (!(irq_desc[irq].status & IRQ_LEVEL))
-		iowrite32(mask, HACK_BASE_ADDR + IAR);
-#else
-	iowrite32(mask, intc_baseaddr + CIE);
-	/* ack edge triggered intr */
-	if (!(irq_desc[irq].status & IRQ_LEVEL))
-		iowrite32(mask, intc_baseaddr + IAR);
-#endif
+		iowrite32(mask, INTC_BASE + IAR);
 }
 
 static void intc_end(unsigned int irq)
@@ -83,17 +70,10 @@ static void intc_end(unsigned int irq)
 
 	pr_debug("end: %d\n", irq);
 	if (!(irq_desc[irq].status & (IRQ_DISABLED | IRQ_INPROGRESS))) {
-#ifdef CONFIG_SELFMOD_INTC
-		iowrite32(mask, HACK_BASE_ADDR + SIE);
+		iowrite32(mask, INTC_BASE + SIE);
 		/* ack level sensitive intr */
 		if (irq_desc[irq].status & IRQ_LEVEL)
-			iowrite32(mask, HACK_BASE_ADDR + IAR);
-#else
-		iowrite32(mask, intc_baseaddr + SIE);
-		/* ack level sensitive intr */
-		if (irq_desc[irq].status & IRQ_LEVEL)
-			iowrite32(mask, intc_baseaddr + IAR);
-#endif
+			iowrite32(mask, INTC_BASE + IAR);
 	}
 }
 
@@ -114,11 +94,7 @@ unsigned int get_irq(struct pt_regs *regs)
 	 * order to handle multiple interrupt controllers. It currently
 	 * is hardcoded to check for interrupts only on the first INTC.
 	 */
-#ifdef CONFIG_SELFMOD_INTC
-	irq = ioread32(HACK_BASE_ADDR + IVR);
-#else
-	irq = ioread32(intc_baseaddr + IVR);
-#endif
+	irq = ioread32(INTC_BASE + IVR);
 	pr_debug("get_irq: %d\n", irq);
 
 	return irq;
@@ -156,9 +132,9 @@ void __init init_IRQ(void)
 
 	intc_baseaddr = *(int *) of_get_property(intc, "reg", NULL);
 	intc_baseaddr = (unsigned long) ioremap(intc_baseaddr, PAGE_SIZE);
-	NR_IRQ = *(int *) of_get_property(intc, "xlnx,num-intr-inputs", NULL);
+	nr_irq = *(int *) of_get_property(intc, "xlnx,num-intr-inputs", NULL);
 #ifdef CONFIG_SELFMOD_INTC
-	function_hack((int *) arr_func, intc_baseaddr);
+	selfmod_function((int *) arr_func, intc_baseaddr);
 #endif
 	printk(KERN_INFO "%s #0 at 0x%08x, irq=%d\n",
 		intc_list[j], intc_baseaddr, handle);
@@ -175,7 +151,7 @@ void __init init_IRQ(void)
 	/* Turn on the Master Enable. */
 	iowrite32(MER_HIE|MER_ME, intc_baseaddr + MER);
 
-	for (i = 0; i < NR_IRQ; ++i) {
+	for (i = 0; i < nr_irq; ++i) {
 		irq_desc[i].chip = &intc_dev;
 
 		if (handle & (0x00000001 << i))

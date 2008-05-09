@@ -5,20 +5,22 @@
  * License. See the file "COPYING" in the main directory of this archive
  * for more details.
  *
- * Copyright (C) 2007 Michal Simek <monstr@monstr.eu>
+ * Copyright (C) 2007-2008 Michal Simek <monstr@monstr.eu>
  */
 
-#ifndef _ASM_MICROBLAZE_HACK_H
-#define _ASM_MICROBLAZE_HACK_H
+#ifndef _ASM_MICROBLAZE_SELFMOD_H
+#define _ASM_MICROBLAZE_SELFMOD_H
 
 /*
- * HACK_BASE_ADDR is constant address for hack function.
- * do not change this value - it is hardcoded in hack function
- * arch/microblaze/kernel/hack.c:function_hack()
+ * BARRIER_BASE_ADDR is constant address for selfmod function.
+ * do not change this value - selfmod function is in
+ * arch/microblaze/kernel/selfmod.c: selfmod_function()
+ *
+ * last 16 bits is used for storing register offset
  */
 
-#define HACK_BASE_ADDR	0x1234ff00
+#define BARRIER_BASE_ADDR	0x1234ff00
 
-void function_hack(const int *arr_fce, const unsigned int base);
+void selfmod_function(const int *arr_fce, const unsigned int base);
 
-#endif /* _ASM_MICROBLAZE_HACK_H */
+#endif /* _ASM_MICROBLAZE_SELFMOD_H */
