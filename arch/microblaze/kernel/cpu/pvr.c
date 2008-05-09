@@ -1,11 +1,13 @@
 /*
- * arch/microblaze/kernel/cpu/pvr.c
- *
  * Support for MicroBlaze PVR (processor version register)
  *
  * Copyright (C) 2007 Michal Simek <monstr@monstr.eu>
  * Copyright (C) 2007 John Williams <john.williams@petalogix.com>
  * Copyright (C) 2007 PetaLogix
+ *
+ * This file is subject to the terms and conditions of the GNU General Public
+ * License. See the file "COPYING" in the main directory of this archive
+ * for more details.
  */
 
 #include <linux/kernel.h>

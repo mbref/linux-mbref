@@ -1,6 +1,4 @@
 /*
- * include/asm-microblaze/flat.h
- *
  * uClinux flat-format executables
  *
  * Copyright (C) 2005 John Williams <jwilliams@itee.uq.edu.au>
@@ -8,7 +6,6 @@
  * This file is subject to the terms and conditions of the GNU General
  * Public License. See the file COPYING in the main directory of this
  * archive for more details.
- *
  */
 
 #ifndef _ASM_MICROBLAZE_FLAT_H

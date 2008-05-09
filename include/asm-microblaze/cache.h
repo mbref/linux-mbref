@@ -1,6 +1,4 @@
 /*
- * include/asm-microblaze/cache.h
- *
  * Cache operations
  *
  * Copyright (C) 2007 Michal Simek <monstr@monstr.eu>
@@ -9,7 +7,6 @@
  * This file is subject to the terms and conditions of the GNU General
  * Public License. See the file COPYING in the main directory of this
  * archive for more details.
- *
  */
 
 #ifndef _ASM_MICROBLAZE_CACHE_H

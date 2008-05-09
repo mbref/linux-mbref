@@ -1,6 +1,4 @@
 /*
- * arch/microblaze/lib/memset.c
- *
  * Copyright (C) 2008 Michal Simek <monstr@monstr.eu>
  *
  * Reasonably optimised generic C-code for memset on Microblaze

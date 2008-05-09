@@ -1,6 +1,4 @@
 /*
- * include/asm-microblaze/prom.h
- *
  * Definitions for talking to the Open Firmware PROM on
  * Power Macintosh computers.
  *

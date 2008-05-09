@@ -1,11 +1,9 @@
 /*
- * arch/microblaze/kernel/irq.c
+ * Copyright (C) 2006 Atmark Techno, Inc.
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License. See the file "COPYING" in the main directory of this archive
  * for more details.
- *
- * Copyright (C) 2006 Atmark Techno, Inc.
  */
 
 #include <linux/init.h>
@@ -15,8 +13,8 @@
 #include <linux/irqflags.h>
 #include <linux/seq_file.h>
 #include <linux/kernel_stat.h>
+#include <linux/irq.h>
 
-#include <asm/irq.h>
 #include <asm/prom.h>
 
 unsigned int irq_of_parse_and_map(struct device_node *dev, int index)

@@ -1,15 +1,13 @@
 /*
- * include/asm-microblaze/termbits.h
+ * Copyright (C) 2006 Atmark Techno, Inc.
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License. See the file "COPYING" in the main directory of this archive
  * for more details.
- *
- * Copyright (C) 2006 Atmark Techno, Inc.
  */
 
-#ifndef _ASM_MICROBLAZE_TERMBITS_H
-#define _ASM_MICROBLAZE_TERMBITS_H
+#ifndef _ASM_GENERIC_TERMBITS_H
+#define _ASM_GENERIC_TERMBITS_H
 
 #include <linux/posix_types.h>
 
@@ -37,7 +35,6 @@ struct ktermios {
 	speed_t c_ispeed; /* input speed */
 	speed_t c_ospeed; /* output speed */
 };
-
 
 /* c_cc characters */
 
@@ -200,4 +197,4 @@ struct ktermios {
 #define	TCSADRAIN	1
 #define	TCSAFLUSH	2
 
-#endif /* _ASM_MICROBLAZE_TERMBITS_H */
+#endif /* _ASM_GENERIC_TERMBITS_H */

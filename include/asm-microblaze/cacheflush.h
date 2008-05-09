@@ -1,6 +1,4 @@
 /*
- * include/asm-microblaze/cacheflush.h
- *
  * Copyright (C) 2007 PetaLogix
  * Copyright (C) 2007 John Williams <john.williams@petalogix.com>
  * based on v850 version which was

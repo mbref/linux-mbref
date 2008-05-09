@@ -1,13 +1,15 @@
 /*
- * arch/microblaze/kernel/early_printk.c
- *
- * Copyright (C) 2007 Michal Simek <monstr@monstr.eu>
- * Copyright (C) 2003-2006 Yasushi SHOJI <yashi@atmark-techno.com>
- *
  * Early printk support for Microblaze.
  *
- * Once we got some system without uart light, we need to refactor.
+ * Copyright (C) 2007-2008 Michal Simek <monstr@monstr.eu>
+ * Copyright (C) 2003-2006 Yasushi SHOJI <yashi@atmark-techno.com>
+ *
+ * This file is subject to the terms and conditions of the GNU General Public
+ * License. See the file "COPYING" in the main directory of this archive
+ * for more details.
  */
+
+/* FIXME Once we got some system without uart light, we need to refactor */
 
 #include <linux/console.h>
 #include <linux/kernel.h>

@@ -1,6 +1,4 @@
 /*
- * arch/microblaze/kernel/cpu/cpuinfo-pvr-full.c
- *
  * Support for MicroBlaze PVR (processor version register)
  *
  * Copyright (C) 2007 John Williams <john.williams@petalogix.com>

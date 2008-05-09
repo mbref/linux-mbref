@@ -1,12 +1,10 @@
 /*
- * arch/microblaze/kernel/intc.c
+ * Copyright (C) 2007 Michal Simek <monstr@monstr.eu>
+ * Copyright (C) 2006 Atmark Techno, Inc.
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License. See the file "COPYING" in the main directory of this archive
  * for more details.
- *
- * Copyright (C) 2007 Michal Simek <monstr@monstr.eu>
- * Copyright (C) 2006 Atmark Techno, Inc.
  */
 #include <linux/init.h>
 #include <linux/irq.h>
@@ -136,8 +134,8 @@ void __init init_IRQ(void)
 #ifdef CONFIG_SELFMOD_INTC
 	selfmod_function((int *) arr_func, intc_baseaddr);
 #endif
-	printk(KERN_INFO "%s #0 at 0x%08x, irq=%d\n",
-		intc_list[j], intc_baseaddr, handle);
+	printk(KERN_INFO "%s #0 at 0x%08x, n_irq=%d\n",
+		intc_list[j], intc_baseaddr, nr_irq);
 
 	/*
 	 * Disable all external interrupts until they are
@@ -149,14 +147,16 @@ void __init init_IRQ(void)
 	iowrite32(0xffffffff, intc_baseaddr + IAR);
 
 	/* Turn on the Master Enable. */
-	iowrite32(MER_HIE|MER_ME, intc_baseaddr + MER);
+	iowrite32(MER_HIE | MER_ME, intc_baseaddr + MER);
 
 	for (i = 0; i < nr_irq; ++i) {
 		irq_desc[i].chip = &intc_dev;
 
 		if (handle & (0x00000001 << i))
-			irq_desc[i].status &= ~IRQ_LEVEL;
+			{irq_desc[i].status &= ~IRQ_LEVEL;
+			printk ("edge %d\n", i);}
 		else
-			irq_desc[i].status |= IRQ_LEVEL;
+			{irq_desc[i].status |= IRQ_LEVEL;
+			printk ("level %d\n", i);}
 	}
 }

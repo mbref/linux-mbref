@@ -1,5 +1,4 @@
 /*
- * arch/microblaze/kernel/cpu/cache.c
  * Cache control for MicroBlaze cache memories
  *
  * Copyright (C) 2007 Michal Simek <monstr@monstr.eu>

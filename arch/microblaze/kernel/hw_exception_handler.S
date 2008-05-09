@@ -1,7 +1,4 @@
 /*
- *
- * arch/microblaze/kernel/hw_exception_handler.S
- *
  * Unaligned exception handling for Microblaze
  *
  * cleanup code (C) 2007 Michal Simek <monstr@monstr.eu>

@@ -1,12 +1,10 @@
 /*
- * arch/microblaze/kernel/asm-offset.c
+ * Copyright (C) 2007 PetaLogix
+ * Copyright (C) 2006 Atmark Techno, Inc.
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License. See the file "COPYING" in the main directory of this archive
  * for more details.
- *
- * Copyright (C) 2007 PetaLogix
- * Copyright (C) 2006 Atmark Techno, Inc.
  */
 
 #include <linux/stddef.h>

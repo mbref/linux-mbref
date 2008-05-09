@@ -1,17 +1,13 @@
 /*
- * arch/microblaze/kernel/sys_microblaze.c
+ * Copyright (C) 2007 PetaLogix
+ *	John Williams <john.williams@petalogix.com>
+ * Copyright (C) 2006 Atmark Techno, Inc.
+ *	Yasushi SHOJI <yashi@atmark-techno.com>
+ *	Tetsuya OHKAWA <tetsuya@atmark-techno.com>
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License. See the file "COPYING" in the main directory of this archive
  * for more details.
- *
- * Copyright (C) 2006 Atmark Techno, Inc.
- * Copyright (C) 2007 PetaLogix
- *
- * Authors:
- * John Williams <john.williams@petalogix.com>
- * Yasushi SHOJI <yashi@atmark-techno.com>
- * Tetsuya OHKAWA <tetsuya@atmark-techno.com>
  */
 
 #include <linux/errno.h>

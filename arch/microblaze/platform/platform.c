@@ -1,6 +1,4 @@
 /*
- * arch/microblaze/platform/platform.c
- *
  * Copyright 2008 Michal Simek <monstr@monstr.eu>
  *
  * based on virtex.c file

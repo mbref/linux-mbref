@@ -1,5 +1,5 @@
 /*
- * arch/microblaze/kernel/ptrace.c -- `ptrace' system call
+ * `ptrace' system call
  *
  * Copyright (C) 2008 Michal Simek <monstr@monstr.eu>
  * Copyright (C) 2007 PetaLogix
