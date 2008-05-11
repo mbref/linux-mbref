@@ -40,6 +40,9 @@ config GENERIC_IRQ_PROBE
 config GENERIC_CALIBRATE_DELAY
 	def_bool y
 
+config GENERIC_TIME
+	def_bool y
+
 config PCI
 	def_bool n
 
@@ -114,6 +117,14 @@ config OF
 
 config OF_DEVICE
 	def_bool y
+
+config PROC_DEVICETREE
+	bool "Support for device tree in /proc"
+	depends on PROC_FS
+	help
+	  This option adds a device-tree directory under /proc which contains
+	  an image of the device tree that the kernel copies from Open
+	  Firmware or other boot firmware. If unsure, say Y here.
 
 endmenu
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Michal Simek <monstr@monstr.eu>
+ * Copyright (C) 2007-2008 Michal Simek <monstr@monstr.eu>
  * Copyright (C) 2006 Atmark Techno, Inc.
  *
  * This file is subject to the terms and conditions of the GNU General Public
@@ -73,24 +73,8 @@ irqreturn_t timer_interrupt(int irq, void *dev_id)
 static struct irqaction timer_irqaction = {
 	.handler = timer_interrupt,
 	.flags = IRQF_DISABLED,
-/*	.flags = IRQF_TIMER,*/
 	.name = "timer",
 };
-
-unsigned long do_gettimeoffset(void)
-{
-	/* Current counter value */
-	unsigned int tcr = ioread32(TIMER_BASE + TCR0);
-
-	/* Load register value (couting down */
-	unsigned int tcmp = ioread32(TIMER_BASE + TLR0);
-
-	/* Offset, in nanoseconds */
-	/* FIXME remove loading from structure - build in is faster */
-	unsigned long offset = (tcmp-tcr)/(cpuinfo.cpu_clock_freq/1000000);
-
-	return offset;
-}
 
 void system_timer_init(void)
 {
@@ -99,7 +83,6 @@ void system_timer_init(void)
 #ifdef CONFIG_SELFMOD_TIMER
 	unsigned int timer_baseaddr = 0;
 	int arr_func[] = {
-				(int)&do_gettimeoffset,
 				(int)&timer_ack,
 				0
 			};
