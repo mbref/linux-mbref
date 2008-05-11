@@ -45,34 +45,12 @@
 #include <asm/sections.h>
 #include <asm/pci-bridge.h>
 
-#ifdef CONFIG_PPC_PSERIES
-#include <asm/rtas.h>
-#include <asm/kdump.h>
-#include <asm/smp.h>
-#include <asm/iommu.h>
-#include <asm/btext.h>
-#include <asm/machdep.h>
-#include <asm/pSeries_reconfig.h>
-#include <asm/phyp_dump.h>
-#include <asm/kexec.h>
-#endif
-
 static int __initdata dt_root_addr_cells;
 static int __initdata dt_root_size_cells;
 
-#ifdef CONFIG_PPC64
-int __initdata iommu_is_off;
-int __initdata iommu_force_on;
-unsigned long tce_alloc_start, tce_alloc_end;
-#endif
-
 typedef u32 cell_t;
 
-#if 0
-static struct boot_param_header *initial_boot_params __initdata;
-#else
 struct boot_param_header *initial_boot_params;
-#endif
 
 extern struct device_node *allnodes;	/* temporary while merging */
 
@@ -416,47 +394,6 @@ static unsigned long __init unflatten_dt_node(unsigned long mem,
 	return mem;
 }
 
-#ifdef CONFIG_PPC_PSERIES
-static int __init early_parse_mem(char *p)
-{
-	if (!p)
-		return 1;
-
-	memory_limit = PAGE_ALIGN(memparse(p, &p));
-	pr_debug("memory limit = 0x%lx\n", memory_limit);
-
-	return 0;
-}
-early_param("mem", early_parse_mem);
-
-/**
- * move_device_tree - move tree to an unused area, if needed.
- *
- * The device tree may be allocated beyond our memory limit, or inside the
- * crash kernel region for kdump. If so, move it out of the way.
- */
-static void __init move_device_tree(void)
-{
-	unsigned long start, size;
-	void *p;
-
-	pr_debug("-> move_device_tree\n");
-
-	start = __pa(initial_boot_params);
-	size = initial_boot_params->totalsize;
-
-	if ((memory_limit && (start + size) > memory_limit) ||
-			overlaps_crashkernel(start, size)) {
-		p = __va(lmb_alloc_base(size, PAGE_SIZE, lmb.rmo_size));
-		memcpy(p, initial_boot_params, size);
-		initial_boot_params = (struct boot_param_header *)p;
-		pr_debug("Moved device tree to 0x%p\n", p);
-	}
-
-	pr_debug("<- move_device_tree\n");
-}
-#endif
-
 /**
  * unflattens the device-tree passed by the firmware, creating the
  * tree of struct device_node. It also fills the "name" and "type"
@@ -506,155 +443,7 @@ void __init unflatten_device_tree(void)
 	pr_debug(" <- unflatten_device_tree()\n");
 }
 
-#ifdef CONFIG_PPC_PSERIES
-/*
- * ibm,pa-features is a per-cpu property that contains a string of
- * attribute descriptors, each of which has a 2 byte header plus up
- * to 254 bytes worth of processor attribute bits.  First header
- * byte specifies the number of bytes following the header.
- * Second header byte is an "attribute-specifier" type, of which
- * zero is the only currently-defined value.
- * Implementation:  Pass in the byte and bit offset for the feature
- * that we are interested in.  The function will return -1 if the
- * pa-features property is missing, or a 1/0 to indicate if the feature
- * is supported/not supported.  Note that the bit numbers are
- * big-endian to match the definition in PAPR.
- */
-static struct ibm_pa_feature {
-	unsigned long	cpu_features;	/* CPU_FTR_xxx bit */
-	unsigned int	cpu_user_ftrs;	/* PPC_FEATURE_xxx bit */
-	unsigned char	pabyte;		/* byte number in ibm,pa-features */
-	unsigned char	pabit;		/* bit number (big-endian) */
-	unsigned char	invert;		/* if 1, pa bit set => clear feature */
-} ibm_pa_features[] __initdata = {
-	{0, PPC_FEATURE_HAS_MMU,	0, 0, 0},
-	{0, PPC_FEATURE_HAS_FPU,	0, 1, 0},
-	{CPU_FTR_SLB, 0,		0, 2, 0},
-	{CPU_FTR_CTRL, 0,		0, 3, 0},
-	{CPU_FTR_NOEXECUTE, 0,		0, 6, 0},
-	{CPU_FTR_NODSISRALIGN, 0,	1, 1, 1},
-	{CPU_FTR_CI_LARGE_PAGE, 0,	1, 2, 0},
-	{CPU_FTR_REAL_LE, PPC_FEATURE_TRUE_LE, 5, 0, 0},
-};
-
-static void __init scan_features(unsigned long node, unsigned char *ftrs,
-				 unsigned long tablelen,
-				 struct ibm_pa_feature *fp,
-				 unsigned long ft_size)
-{
-	unsigned long i, len, bit;
-
-	/* find descriptor with type == 0 */
-	for (;;) {
-		if (tablelen < 3)
-			return;
-		len = 2 + ftrs[0];
-		if (tablelen < len)
-			return;		/* descriptor 0 not found */
-		if (ftrs[1] == 0)
-			break;
-		tablelen -= len;
-		ftrs += len;
-	}
-
-	/* loop over bits we know about */
-	for (i = 0; i < ft_size; ++i, ++fp) {
-		if (fp->pabyte >= ftrs[0])
-			continue;
-		bit = (ftrs[2 + fp->pabyte] >> (7 - fp->pabit)) & 1;
-		if (bit ^ fp->invert) {
-			cur_cpu_spec->cpu_features |= fp->cpu_features;
-			cur_cpu_spec->cpu_user_features |= fp->cpu_user_ftrs;
-		} else {
-			cur_cpu_spec->cpu_features &= ~fp->cpu_features;
-			cur_cpu_spec->cpu_user_features &= ~fp->cpu_user_ftrs;
-		}
-	}
-}
-
-static void __init check_cpu_pa_features(unsigned long node)
-{
-	unsigned char *pa_ftrs;
-	unsigned long tablelen;
-
-	pa_ftrs = of_get_flat_dt_prop(node, "ibm,pa-features", &tablelen);
-	if (pa_ftrs == NULL)
-		return;
-
-	scan_features(node, pa_ftrs, tablelen,
-		      ibm_pa_features, ARRAY_SIZE(ibm_pa_features));
-}
-
-#ifdef CONFIG_PPC64
-static void __init check_cpu_slb_size(unsigned long node)
-{
-	u32 *slb_size_ptr;
-
-	slb_size_ptr = of_get_flat_dt_prop(node, "ibm,slb-size", NULL);
-	if (slb_size_ptr != NULL) {
-		mmu_slb_size = *slb_size_ptr;
-	}
-}
-#else
-#define check_cpu_slb_size(node) do { } while(0)
-#endif
-
-static struct feature_property {
-	const char *name;
-	u32 min_value;
-	unsigned long cpu_feature;
-	unsigned long cpu_user_ftr;
-} feature_properties[] __initdata = {
-#ifdef CONFIG_ALTIVEC
-	{"altivec", 0, CPU_FTR_ALTIVEC, PPC_FEATURE_HAS_ALTIVEC},
-	{"ibm,vmx", 1, CPU_FTR_ALTIVEC, PPC_FEATURE_HAS_ALTIVEC},
-#endif /* CONFIG_ALTIVEC */
-#ifdef CONFIG_PPC64
-	{"ibm,dfp", 1, 0, PPC_FEATURE_HAS_DFP},
-	{"ibm,purr", 1, CPU_FTR_PURR, 0},
-	{"ibm,spurr", 1, CPU_FTR_SPURR, 0},
-#endif /* CONFIG_PPC64 */
-};
-
-#if defined(CONFIG_44x) && defined(CONFIG_PPC_FPU)
-static inline void identical_pvr_fixup(unsigned long node)
-{
-	unsigned int pvr;
-	char *model = of_get_flat_dt_prop(node, "model", NULL);
-
-	/*
-	 * Since 440GR(x)/440EP(x) processors have the same pvr,
-	 * we check the node path and set bit 28 in the cur_cpu_spec
-	 * pvr for EP(x) processor version. This bit is always 0 in
-	 * the "real" pvr. Then we call identify_cpu again with
-	 * the new logical pvr to enable FPU support.
-	 */
-	if (model && strstr(model, "440EP")) {
-		pvr = cur_cpu_spec->pvr_value | 0x8;
-		identify_cpu(0, pvr);
-		DBG("Using logical pvr %x for %s\n", pvr, model);
-	}
-}
-#else
-#define identical_pvr_fixup(node) do { } while(0)
-#endif
-
-static void __init check_cpu_feature_properties(unsigned long node)
-{
-	unsigned long i;
-	struct feature_property *fp = feature_properties;
-	const u32 *prop;
-
-	for (i = 0; i < ARRAY_SIZE(feature_properties); ++i, ++fp) {
-		prop = of_get_flat_dt_prop(node, fp->name, NULL);
-		if (prop && *prop >= fp->min_value) {
-			cur_cpu_spec->cpu_features |= fp->cpu_feature;
-			cur_cpu_spec->cpu_user_features |= fp->cpu_user_ftr;
-		}
-	}
-}
-
-#endif /* CONFIG_PPC_PSERIES */
+#define early_init_dt_scan_drconf_memory(node) 0
 
 static int __init early_init_dt_scan_cpus(unsigned long node,
 					  const char *uname, int depth,
@@ -662,9 +451,6 @@ static int __init early_init_dt_scan_cpus(unsigned long node,
 {
 	static int logical_cpuid;
 	char *type = of_get_flat_dt_prop(node, "device_type", NULL);
-#ifdef CONFIG_PPC_PSERIES
-	const u32 *prop;
-#endif
 	const u32 *intserv;
 	int i, nthreads;
 	unsigned long len;
@@ -721,41 +507,8 @@ static int __init early_init_dt_scan_cpus(unsigned long node,
 		pr_debug("boot cpu: logical %d physical %d\n", logical_cpuid,
 			intserv[i]);
 		boot_cpuid = logical_cpuid;
-#ifdef CONFIG_PPC_PSERIES
-		set_hard_smp_processor_id(boot_cpuid, intserv[i]);
-
-		/*
-		 * PAPR defines "logical" PVR values for cpus that
-		 * meet various levels of the architecture:
-		 * 0x0f000001	Architecture version 2.04
-		 * 0x0f000002	Architecture version 2.05
-		 * If the cpu-version property in the cpu node contains
-		 * such a value, we call identify_cpu again with the
-		 * logical PVR value in order to use the cpu feature
-		 * bits appropriate for the architecture level.
-		 *
-		 * A POWER6 partition in "POWER6 architected" mode
-		 * uses the 0x0f000002 PVR value; in POWER5+ mode
-		 * it uses 0x0f000001.
-		 */
-		prop = of_get_flat_dt_prop(node, "cpu-version", NULL);
-		if (prop && (*prop & 0xff000000) == 0x0f000000)
-			identify_cpu(0, *prop);
-
-		identical_pvr_fixup(node);
-#endif
 	}
 
-#ifdef CONFIG_PPC_PSERIES
-	check_cpu_feature_properties(node);
-	check_cpu_pa_features(node);
-	check_cpu_slb_size(node);
-
-	if (nthreads > 1)
-		cur_cpu_spec->cpu_features |= CPU_FTR_SMT;
-	else
-		cur_cpu_spec->cpu_features &= ~CPU_FTR_SMT;
-#endif
 	return 0;
 }
 
@@ -802,30 +555,6 @@ static int __init early_init_dt_scan_chosen(unsigned long node,
 		(strcmp(uname, "chosen") != 0 &&
 				strcmp(uname, "chosen@0") != 0))
 		return 0;
-
-#ifdef CONFIG_PPC64
-	/* check if iommu is forced on or off */
-	if (of_get_flat_dt_prop(node, "linux,iommu-off", NULL) != NULL)
-		iommu_is_off = 1;
-	if (of_get_flat_dt_prop(node, "linux,iommu-force-on", NULL) != NULL)
-		iommu_force_on = 1;
-#endif
-
-#ifdef CONFIG_PPC_PSERIES
-	/* mem=x on the command line is the preferred mechanism */
-	lprop = of_get_flat_dt_prop(node, "linux,memory-limit", NULL);
-	if (lprop)
-		memory_limit = *lprop;
-#endif
-
-#ifdef CONFIG_PPC64
-	lprop = of_get_flat_dt_prop(node, "linux,tce-alloc-start", NULL);
-	if (lprop)
-		tce_alloc_start = *lprop;
-	lprop = of_get_flat_dt_prop(node, "linux,tce-alloc-end", NULL);
-	if (lprop)
-		tce_alloc_end = *lprop;
-#endif
 
 #ifdef CONFIG_KEXEC
 	lprop = (u64 *)of_get_flat_dt_prop(node,
@@ -885,57 +614,6 @@ static u64 __init dt_mem_next_cell(int s, cell_t **cellp)
 	return of_read_number(p, s);
 }
 
-#ifdef CONFIG_PPC_PSERIES
-/*
- * Interpret the ibm,dynamic-memory property in the
- * /ibm,dynamic-reconfiguration-memory node.
- * This contains a list of memory blocks along with NUMA affinity
- * information.
- */
-static int __init early_init_dt_scan_drconf_memory(unsigned long node)
-{
-	cell_t *dm, *ls;
-	unsigned long l, n, flags;
-	u64 base, size, lmb_size;
-
-	ls = (cell_t *)of_get_flat_dt_prop(node, "ibm,lmb-size", &l);
-	if (ls == NULL || l < dt_root_size_cells * sizeof(cell_t))
-		return 0;
-	lmb_size = dt_mem_next_cell(dt_root_size_cells, &ls);
-
-	dm = (cell_t *)of_get_flat_dt_prop(node, "ibm,dynamic-memory", &l);
-	if (dm == NULL || l < sizeof(cell_t))
-		return 0;
-
-	n = *dm++;	/* number of entries */
-	if (l < (n * (dt_root_addr_cells + 4) + 1) * sizeof(cell_t))
-		return 0;
-
-	for (; n != 0; --n) {
-		base = dt_mem_next_cell(dt_root_addr_cells, &dm);
-		flags = dm[3];
-		/* skip DRC index, pad, assoc. list index, flags */
-		dm += 4;
-		/* skip this block if the reserved bit is set in flags (0x80)
-		   or if the block is not assigned to this partition (0x8) */
-		if ((flags & 0x80) || !(flags & 0x8))
-			continue;
-		size = lmb_size;
-		if (iommu_is_off) {
-			if (base >= 0x80000000ul)
-				continue;
-			if ((base + size) > 0x80000000ul)
-				size = 0x80000000ul - base;
-		}
-		lmb_add(base, size);
-	}
-	lmb_dump_all();
-	return 0;
-}
-#else
-#define early_init_dt_scan_drconf_memory(node)	0
-#endif /* CONFIG_PPC_PSERIES */
-
 static int __init early_init_dt_scan_memory(unsigned long node,
 				const char *uname, int depth, void *data)
 {
@@ -981,79 +659,10 @@ static int __init early_init_dt_scan_memory(unsigned long node,
 		pr_debug(" - %llx ,  %llx\n", (unsigned long long)base,
 			(unsigned long long)size);
 
-#ifdef CONFIG_PPC64
-		if (iommu_is_off) {
-			if (base >= 0x80000000ul)
-				continue;
-			if ((base + size) > 0x80000000ul)
-				size = 0x80000000ul - base;
-		}
-#endif
 		lmb_add(base, size);
 	}
 	return 0;
 }
-
-#ifdef CONFIG_PPC_PSERIES
-static void __init early_reserve_mem(void)
-{
-	u64 base, size;
-	u64 *reserve_map;
-	unsigned long self_base;
-	unsigned long self_size;
-
-	reserve_map = (u64 *)(((unsigned long)initial_boot_params) +
-					initial_boot_params->off_mem_rsvmap);
-
-	/* before we do anything, lets reserve the dt blob */
-	self_base = __pa((unsigned long)initial_boot_params);
-	self_size = initial_boot_params->totalsize;
-	lmb_reserve(self_base, self_size);
-
-#ifdef CONFIG_BLK_DEV_INITRD
-	/* then reserve the initrd, if any */
-	if (initrd_start && (initrd_end > initrd_start))
-		lmb_reserve(__pa(initrd_start), initrd_end - initrd_start);
-#endif /* CONFIG_BLK_DEV_INITRD */
-
-#ifdef CONFIG_PPC32
-	/*
-	 * Handle the case where we might be booting from an old kexec
-	 * image that setup the mem_rsvmap as pairs of 32-bit values
-	 */
-	if (*reserve_map > 0xffffffffull) {
-		u32 base_32, size_32;
-		u32 *reserve_map_32 = (u32 *)reserve_map;
-
-		while (1) {
-			base_32 = *(reserve_map_32++);
-			size_32 = *(reserve_map_32++);
-			if (size_32 == 0)
-				break;
-			/* skip if the reservation is for the blob */
-			if (base_32 == self_base && size_32 == self_size)
-				continue;
-			pr_debug("reserving: %x -> %x\n", base_32, size_32);
-			lmb_reserve(base_32, size_32);
-		}
-		return;
-	}
-#endif
-	while (1) {
-		base = *(reserve_map++);
-		size = *(reserve_map++);
-		if (size == 0)
-			break;
-		pr_debug("reserving: %llx -> %llx\n", base, size);
-		lmb_reserve(base, size);
-	}
-
-#if 0
-	pr_debug("memory reserved, lmbs :\n");
-	lmb_dump_all();
-#endif
-}
-#endif
 
 #ifdef CONFIG_PHYP_DUMP
 /**
@@ -1142,11 +751,6 @@ void __init early_init_devtree(void *params)
 	/* Setup flat device-tree pointer */
 	initial_boot_params = params;
 
-#ifdef CONFIG_PPC_RTAS
-	/* Some machines might need RTAS info for debugging, grab it now. */
-	of_scan_flat_dt(early_init_dt_scan_rtas, NULL);
-#endif
-
 #ifdef CONFIG_PHYP_DUMP
 	/* scan tree to see if dump occured during last boot */
 	of_scan_flat_dt(early_init_dt_scan_phyp_dump, NULL);
@@ -1167,26 +771,10 @@ void __init early_init_devtree(void *params)
 	strlcpy(boot_command_line, cmd_line, COMMAND_LINE_SIZE);
 	parse_early_param();
 
-#ifdef CONFIG_PPC_PSERIES
-	/* Reserve LMB regions used by kernel, initrd, dt, etc... */
-	lmb_reserve(PHYSICAL_START, __pa(klimit) - PHYSICAL_START);
-	reserve_kdump_trampoline();
-	reserve_crashkernel();
-	early_reserve_mem();
-	phyp_dump_reserve_mem();
-
-	lmb_enforce_memory_limit(memory_limit);
-#endif
-
 	lmb_analyze();
 
 	pr_debug("Phys. mem: %lx\n",(unsigned long) lmb_phys_mem_size());
 
-#ifdef CONFIG_PPC_PSERIES
-	/* We may need to relocate the flat tree, do it now.
-	 * FIXME .. and the initrd too? */
-	move_device_tree();
-#endif
 	pr_debug("Scanning CPUs ...\n");
 
 	/* Retreive CPU related informations from the flat tree
@@ -1402,78 +990,6 @@ void of_detach_node(struct device_node *np)
 out_unlock:
 	write_unlock_irqrestore(&devtree_lock, flags);
 }
-
-#ifdef CONFIG_PPC_PSERIES
-/*
- * Fix up the uninitialized fields in a new device node:
- * name, type and pci-specific fields
- */
-
-static int of_finish_dynamic_node(struct device_node *node)
-{
-	struct device_node *parent = of_get_parent(node);
-	int err = 0;
-	const phandle *ibm_phandle;
-
-	node->name = of_get_property(node, "name", NULL);
-	node->type = of_get_property(node, "device_type", NULL);
-
-	if (!node->name)
-		node->name = "<NULL>";
-	if (!node->type)
-		node->type = "<NULL>";
-
-	if (!parent) {
-		err = -ENODEV;
-		goto out;
-	}
-
-	/* We don't support that function on PowerMac, at least
-	 * not yet
-	 */
-	if (machine_is(powermac))
-		return -ENODEV;
-
-	/* fix up new node's linux_phandle field */
-	if ((ibm_phandle = of_get_property(node, "ibm,phandle", NULL)))
-		node->linux_phandle = *ibm_phandle;
-
-out:
-	of_node_put(parent);
-	return err;
-}
-
-static int prom_reconfig_notifier(struct notifier_block *nb,
-				  unsigned long action, void *node)
-{
-	int err;
-
-	switch (action) {
-	case PSERIES_RECONFIG_ADD:
-		err = of_finish_dynamic_node(node);
-		if (err < 0) {
-			printk(KERN_ERR "finish_node returned %d\n", err);
-			err = NOTIFY_BAD;
-		}
-		break;
-	default:
-		err = NOTIFY_DONE;
-		break;
-	}
-	return err;
-}
-
-static struct notifier_block prom_reconfig_nb = {
-	.notifier_call = prom_reconfig_notifier,
-	.priority = 10, /* This one needs to run first */
-};
-
-static int __init prom_reconfig_setup(void)
-{
-	return pSeries_reconfig_notifier_register(&prom_reconfig_nb);
-}
-__initcall(prom_reconfig_setup);
-#endif
 
 /*
  * Add a property to a node
