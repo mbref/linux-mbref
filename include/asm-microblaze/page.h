@@ -1,11 +1,9 @@
 /*
- * include/asm-microblaze/page.h
+ * Copyright (C) 2006 Atmark Techno, Inc.
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License. See the file "COPYING" in the main directory of this archive
  * for more details.
- *
- * Copyright (C) 2006 Atmark Techno, Inc.
  */
 
 #ifndef _ASM_MICROBLAZE_PAGE_H
@@ -44,6 +42,7 @@ typedef struct { unsigned long	ste[64]; }	pmd_t;
 typedef struct { pmd_t		pue[1]; }	pud_t;
 typedef struct { pud_t		pge[1]; }	pgd_t;
 typedef struct { unsigned long	pgprot; }	pgprot_t;
+typedef struct page *pgtable_t;
 
 #define pte_val(x)	((x).pte)
 #define pmd_val(x)	((x).ste[0])

@@ -1,11 +1,9 @@
 /*
- * include/asm-microblaze/system.h
+ * Copyright (C) 2006 Atmark Techno, Inc.
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License. See the file "COPYING" in the main directory of this archive
  * for more details.
- *
- * Copyright (C) 2006 Atmark Techno, Inc.
  */
 
 #ifndef _ASM_MICROBLAZE_SYSTEM_H
@@ -13,6 +11,7 @@
 
 #include <linux/autoconf.h>
 #include <asm/registers.h>
+#include <asm/setup.h>
 
 struct task_struct;
 struct thread_info;
@@ -181,10 +180,11 @@ extern void *cacheable_memcpy(void *, const void *, unsigned int);
 void free_init_pages(char *what, unsigned long begin, unsigned long end);
 void free_initmem(void);
 extern char *klimit;
+extern unsigned int memory_end;
 extern void ret_from_fork(void);
 
-#ifdef CONFIG_MTD_UCLINUX
-extern char *_ebss;
+#ifdef CONFIG_DEBUG_FS
+extern struct dentry *of_debugfs_root;
 #endif
 
 #endif /* _ASM_MICROBLAZE_SYSTEM_H */

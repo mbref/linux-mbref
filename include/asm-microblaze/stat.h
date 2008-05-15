@@ -1,6 +1,4 @@
 /*
- * include/asm-microblaze/stat.h
- *
  * Microblaze stat structure
  *
  * Copyright (C) 2001,02,03 NEC Electronics Corporation

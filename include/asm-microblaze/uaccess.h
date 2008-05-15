@@ -1,11 +1,9 @@
 /*
- * include/asm-microblaze/uaccess.h
+ * Copyright (C) 2006 Atmark Techno, Inc.
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License. See the file "COPYING" in the main directory of this archive
  * for more details.
- *
- * Copyright (C) 2006 Atmark Techno, Inc.
  */
 
 #ifndef _ASM_MICROBLAZE_UACCESS_H
@@ -55,7 +53,7 @@ extern inline int bad_user_access_length(void)
 		__gu_err;						\
 	})
 
-#define __get_user_bad()	(bad_user_access_length (), (-EFAULT))
+#define __get_user_bad()	(bad_user_access_length(), (-EFAULT))
 
 #define __put_user(var, ptr)						\
 	({								\
@@ -78,7 +76,7 @@ extern inline int bad_user_access_length(void)
 		__pu_err;						\
 	})
 
-#define __put_user_bad()	(bad_user_access_length (), (-EFAULT))
+#define __put_user_bad()	(bad_user_access_length(), (-EFAULT))
 
 #define put_user(x, ptr)	__put_user(x, ptr)
 #define get_user(x, ptr)	__get_user(x, ptr)

@@ -1,11 +1,9 @@
 /*
- * include/asm-microblaze/thread_info.h
+ * Copyright (C) 2006 Atmark Techno, Inc.
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License. See the file "COPYING" in the main directory of this archive
  * for more details.
- *
- * Copyright (C) 2006 Atmark Techno, Inc.
  */
 
 #ifndef _ASM_MICROBLAZE_THREAD_INFO_H
@@ -30,7 +28,7 @@
  */
 
 struct cpu_context {
-	__u32	sp;
+	__u32	r1; /* stack pointer */
 	__u32	r2;
 	/* dedicated registers */
 	__u32	r13;
@@ -52,6 +50,7 @@ struct cpu_context {
 	__u32	r28;
 	__u32	r29;
 	__u32	r30;
+	/* r31 is used as current task pointer */
 	/* special purpose registers */
 	__u32	msr;
 	__u32	ear;

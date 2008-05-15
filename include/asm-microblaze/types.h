@@ -1,11 +1,9 @@
 /*
- * include/asm-microblaze/types.h
+ * Copyright (C) Atmark Techno, Inc.
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License. See the file "COPYING" in the main directory of this archive
  * for more details.
- *
- * Copyright (C) Atmark Techno, Inc.
  */
 
 #ifndef _ASM_MICROBLAZE_TYPES_H

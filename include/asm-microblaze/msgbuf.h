@@ -1,18 +1,16 @@
 /*
- * include/asm-microblaze/msgbuf.h
+ * Copyright (C) 2006 Atmark Techno, Inc.
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License. See the file "COPYING" in the main directory of this archive
  * for more details.
- *
- * Copyright (C) 2006 Atmark Techno, Inc.
  */
 
 #ifndef _ASM_MICROBLAZE_MSGBUF_H
 #define _ASM_MICROBLAZE_MSGBUF_H
 
 /*
- * The msqid64_ds structure for m68k architecture.
+ * The msqid64_ds structure for microblaze architecture.
  * Note extra padding because this structure is passed back and forth
  * between kernel and user space.
  *

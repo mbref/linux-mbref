@@ -1,6 +1,4 @@
 /*
- * include/asm-microblaze/pvr.h
- *
  * Support for the MicroBlaze PVR (Processor Version Register)
  *
  * Copyright (C) 2007 John Williams <john.williams@petalogix.com>

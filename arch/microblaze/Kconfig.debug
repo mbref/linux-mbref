@@ -6,14 +6,31 @@ menu "Kernel hacking"
 source "lib/Kconfig.debug"
 
 config EARLY_PRINTK
-	def_bool y
+	bool "Early printk function for kernel"
+	default n
+	help
+	  This option turns on/off early printk messages to console.
 
 config EARLY_PRINTK_UARTLITE_ADDRESS
 	hex "Physical address where UART Lite for early printk is mapped"
 	depends on EARLY_PRINTK
-	default "0x40600000"
+	default "0x00000000"
 	help
 	  Please enter physical address where your uart lite is mapped.
+
+config HEART_BEAT
+	bool "Heart beat function for kernel"
+	default n
+	help
+	  This option turns on/off heart beat kernel functionality on selected
+	  GPIO address.
+
+config HEART_BEAT_ADDRESS
+	hex "Physical address for heart beat LED"
+	depends on HEART_BEAT
+	default "0x00000000"
+	help
+	  Please enter physical address GPIO LED.
 
 config DEBUG_BOOTMEM
 	depends on DEBUG_KERNEL

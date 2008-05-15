@@ -61,7 +61,7 @@ void show_stack(struct task_struct *task, unsigned long *sp)
 	if (sp == NULL) {
 		if (task)
 			sp = (unsigned long *) ((struct thread_info *)
-						(task->stack))->cpu_context.sp;
+						(task->stack))->cpu_context.r1;
 		else
 			sp = (unsigned long *)&sp;
 	}

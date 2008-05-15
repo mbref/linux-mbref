@@ -71,7 +71,7 @@ int copy_thread(int nr, unsigned long clone_flags, unsigned long usp,
 		childregs->r1 = ((unsigned long) ti) + THREAD_SIZE;
 
 	memset(&ti->cpu_context, 0, sizeof(struct cpu_context));
-	ti->cpu_context.sp = (unsigned long)childregs;
+	ti->cpu_context.r1 = (unsigned long)childregs;
 	ti->cpu_context.msr = (unsigned long)childregs->msr;
 	ti->cpu_context.r15 = (unsigned long)ret_from_fork - 8;
 

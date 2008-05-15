@@ -1,6 +1,4 @@
 /*
- * include/asm-microblaze/clinkage.h
- *
  * Macros to reflect C symbol-naming conventions
  *
  * Copyright (C) 2003 John Williams <jwilliams@itee.uq.edu.au>

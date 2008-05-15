@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
 	BLANK();
 
 	/* struct cpu_context */
-	DEFINE(CC_SP, offsetof(struct cpu_context, sp)); /* r1 */
+	DEFINE(CC_SP, offsetof(struct cpu_context, r1));
 	DEFINE(CC_R2, offsetof(struct cpu_context, r2));
 	/* dedicated registers */
 	DEFINE(CC_R13, offsetof(struct cpu_context, r13));

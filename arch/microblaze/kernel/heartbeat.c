@@ -1,11 +1,10 @@
 /*
- * arch/microblaze/kernel/heartbeat.c
+ * Copyright (C) 2007-2008 Michal Simek <monstr@monstr.eu>
+ * Copyright (C) 2006 Atmark Techno, Inc.
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License. See the file "COPYING" in the main directory of this archive
  * for more details.
- *
- * Copyright (C) 2006 Atmark Techno, Inc.
  */
 
 #include <linux/sched.h>
@@ -15,18 +14,15 @@
 
 void heartbeat(void)
 {
-#if 0
 	static unsigned int cnt, period, dist;
 
-	if (cnt == 0 || cnt == dist) {
-		iowrite32(1, CONFIG_XILINX_LEDS_4BIT_BASEADDR);
-	} else if (cnt == 7 || cnt == dist + 7) {
-		iowrite32(0, CONFIG_XILINX_LEDS_4BIT_BASEADDR);
-	}
+	if (cnt == 0 || cnt == dist)
+		iowrite32(1, CONFIG_HEART_BEAT_ADDRESS);
+	else if (cnt == 7 || cnt == dist + 7)
+		iowrite32(0, CONFIG_HEART_BEAT_ADDRESS);
 
 	if (++cnt > period) {
 		cnt = 0;
-
 		/*
 		 * The hyperbolic function below modifies the heartbeat period
 		 * length in dependency of the current (5min) load. It goes
@@ -36,5 +32,4 @@ void heartbeat(void)
 					(7 << FSHIFT))) + 30;
 		dist = period / 4;
 	}
-#endif
 }

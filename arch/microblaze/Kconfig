@@ -39,11 +39,24 @@ config GENERIC_IRQ_PROBE
 config GENERIC_CALIBRATE_DELAY
 	def_bool y
 
+config GENERIC_TIME
+	def_bool y
+
 config PCI
 	def_bool n
 
+config NO_DMA
+	def_bool y
+
+config GENERIC_CSUM
+	def_bool y
+
 config UID16
 	def_bool y
+
+config HZ
+	int
+	default 100
 
 config DEFCONFIG_LIST
 	string
@@ -54,6 +67,7 @@ source "init/Kconfig"
 source "arch/microblaze/platform/Kconfig.platform"
 
 menu "Processor type and features"
+
 config PREEMPT
 	bool "Preemptible Kernel"
 	help
@@ -71,15 +85,6 @@ config PREEMPT_TIMES
 	depends on PREEMPT
 	help
 	  Allow collection for preemption latency times.
-
-config XILINX_UNCACHED_SHADOW
-	bool "Are you using uncached shadow for RAM ?"
-	depends on MICROBLAZE
-	default y
-	help
-	  This is needed to be able to allocate uncachable memory regions.
-	  The feature requires the design to define the RAM memory controller window
-	  to be twice as large as the actual physical memory.
 
 config LARGE_ALLOCS
 	bool "Allow allocating large blocks (> 1MB) of memory"
@@ -111,6 +116,14 @@ config OF
 
 config OF_DEVICE
 	def_bool y
+
+config PROC_DEVICETREE
+	bool "Support for device tree in /proc"
+	depends on PROC_FS
+	help
+	  This option adds a device-tree directory under /proc which contains
+	  an image of the device tree that the kernel copies from Open
+	  Firmware or other boot firmware. If unsure, say Y here.
 
 endmenu
 
