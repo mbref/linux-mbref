@@ -52,8 +52,8 @@ config NO_DMA
 config GENERIC_CSUM
 	def_bool y
 
-config UID16
-	def_bool y
+#config UID16
+#	def_bool y
 
 config HZ
 	int
@@ -94,6 +94,12 @@ config LARGE_ALLOCS
 	  memory sizes - up to 32MB. You may need this if your system has
 	  a lot of RAM, and you need to able to allocate very large
 	  contiguous chunks. If unsure, say N.
+
+config GENERIC_CLOCKEVENTS
+	bool "Clockevents - enable"
+	default n
+	help
+	  clock events
 
 comment "Boot options"
 

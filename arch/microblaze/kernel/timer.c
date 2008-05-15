@@ -76,7 +76,8 @@ static struct irqaction timer_irqaction = {
 	.name = "timer",
 };
 
-void system_timer_init(void)
+//void system_timer_init(void)
+void time_init(void)
 {
 	int irq, j = 0;
 	struct device_node *timer = NULL;
@@ -93,6 +94,9 @@ void system_timer_init(void)
 				"xlnx,opb-timer-1.00.a",
 				NULL
 			};
+
+
+	jiffies = 0;
 
 	for (j = 0; timer_list[j] != NULL; j++) {
 		timer = of_find_compatible_node(NULL, NULL, timer_list[j]);

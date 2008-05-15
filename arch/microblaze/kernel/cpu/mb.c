@@ -30,6 +30,7 @@ static int show_cpuinfo(struct seq_file *m, void *v)
 	char *fpga_family = "Unknown";
 	char *cpu_ver = "Unknown";
 	int i;
+	printk("%s\n",__func__);
 
 	/* Denormalised to get the fpga family string */
 	for (i = 0; family_string_lookup[i].s != NULL; i++) {

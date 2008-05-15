@@ -5,9 +5,11 @@
  * License. See the file "COPYING" in the main directory of this archive
  * for more details.
  *
- * Copyright (C) 2007 Michal Simek <monstr@monstr.eu>
+ * Copyright (C) 2007-2008 Michal Simek <monstr@monstr.eu>
  * Copyright (C) 2006 Atmark Techno, Inc.
  */
+
+#undef DEBUG
 
 #include <linux/autoconf.h>
 #include <linux/init.h>
@@ -23,11 +25,9 @@
 #include <asm/system.h>
 #include <asm/pgtable.h>
 
-#undef DEBUG
-
 char *klimit = _end;
 static unsigned int memory_start;
-unsigned int memory_end;
+unsigned int memory_end; /* due to mm/nommu.c */
 
 unsigned int __page_offset;
 /* EXPORT_SYMBOL(__page_offset); */
@@ -96,7 +96,7 @@ void __init setup_memory(void)
 			((end_pfn - start_pfn) << PAGE_SHIFT) - 1);
 
 	/* reserve allocate blocks */
-	for (i = 1; i < lmb.reserved.cnt; i++) {
+	for (i = 0; i < lmb.reserved.cnt; i++) {
 		pr_debug("reserved %d - 0x%08x-0x%08x\n", i,
 			(u32) lmb.reserved.region[i].base,
 			(u32) lmb_size_bytes(&lmb.reserved, i));

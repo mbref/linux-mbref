@@ -34,7 +34,7 @@
 		reg = < 20000000 2000000 >;
 	} ;
 	chosen {
-		bootargs = "console=ttyUL0,115200";
+		bootargs = "console=ttyUL0,115200 loglevel=15";
 		linux,stdout-path = "/plb@0/serial@40100000";
 	} ;
 	cpus {

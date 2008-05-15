@@ -461,13 +461,13 @@ static int __init early_init_dt_scan_cpus(unsigned long node,
 		return 0;
 
 	/* Get physical cpuid */
-	intserv = of_get_flat_dt_prop(node, "ibm,ppc-interrupt-server#s", &len);
+/*	intserv = of_get_flat_dt_prop(node, "ibm,ppc-interrupt-server#s", &len);
 	if (intserv) {
 		nthreads = len / sizeof(int);
-	} else {
+	} else {*/
 		intserv = of_get_flat_dt_prop(node, "reg", NULL);
 		nthreads = 1;
-	}
+/*	}*/
 
 	/*
 	 * Now see if any of these threads match our boot cpu.
@@ -622,10 +622,10 @@ static int __init early_init_dt_scan_memory(unsigned long node,
 	unsigned long l;
 
 	/* Look for the ibm,dynamic-reconfiguration-memory node */
-	if (depth == 1 &&
+/*	if (depth == 1 &&
 		strcmp(uname, "ibm,dynamic-reconfiguration-memory") == 0)
 		return early_init_dt_scan_drconf_memory(node);
-
+*/
 	/* We are scanning "memory" nodes only */
 	if (type == NULL) {
 		/*
