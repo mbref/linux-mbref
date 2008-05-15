@@ -32,6 +32,7 @@ extern struct task_struct *_switch_to(struct thread_info *prev,
 	do {						\
 		asm volatile ("# local_irq_save	\n\t"	\
 				"msrclr %0, %1	\n\t"	\
+				"nop	\n\t"		\
 				: "=r"(flags)		\
 				: "i"(MSR_IE)		\
 				: "memory");		\
@@ -41,6 +42,7 @@ extern struct task_struct *_switch_to(struct thread_info *prev,
 	do {							\
 		asm volatile ("# local_irq_disable \n\t"	\
 				"msrclr r0, %0 \n\t"		\
+				"nop	\n\t"			\
 				:				\
 				: "i"(MSR_IE)			\
 				: "memory");			\
@@ -50,6 +52,7 @@ extern struct task_struct *_switch_to(struct thread_info *prev,
 	do {							\
 		asm volatile ("# local_irq_enable \n\t"		\
 				"msrset	r0, %0 \n\t"		\
+				"nop	\n\t"			\
 				:				\
 				: "i"(MSR_IE)			\
 				: "memory");			\
@@ -102,6 +105,7 @@ extern struct task_struct *_switch_to(struct thread_info *prev,
 	do {							\
 		asm volatile ("# local_save_flags \n\t"		\
 				"mfs	%0, rmsr \n\t"		\
+				"nop	\n\t"			\
 				: "=r"(flags)			\
 				:				\
 				: "memory");			\
@@ -111,6 +115,7 @@ extern struct task_struct *_switch_to(struct thread_info *prev,
 	do {						\
 		asm volatile ("# local_irq_restore \n\t"\
 				"mts	rmsr, %0 \n\t"	\
+				"nop	\n\t"		\
 				:			\
 				:"r"(flags)		\
 				: "memory");		\
