@@ -1,12 +1,10 @@
 /*
- * arch/microblaze/kernel/setup.c
+ * Copyright (C) 2007-2008 Michal Simek <monstr@monstr.eu>
+ * Copyright (C) 2006 Atmark Techno, Inc.
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License. See the file "COPYING" in the main directory of this archive
  * for more details.
- *
- * Copyright (C) 2008 Michal Simek <monstr@monstr.eu>
- * Copyright (C) 2006 Atmark Techno, Inc.
  */
 
 #include <linux/init.h>
@@ -60,10 +58,9 @@ void __init setup_arch(char **cmdline_p)
 
 	setup_memory();
 	paging_init();
-#ifdef CONFIG_HACK
-	printk(KERN_NOTICE "HACK function enable\n");
-#else
-	printk(KERN_NOTICE "HACK function disable\n");
+
+#if defined(CONFIG_SELFMOD_INTC) || defined(CONFIG_SELFMOD_TIMER)
+	printk(KERN_NOTICE "Self modified code enable\n");
 #endif
 
 #ifdef CONFIG_VT

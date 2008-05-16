@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.24
-# Fri May 16 10:18:53 2008
+# Fri May 16 10:27:36 2008
 #
 CONFIG_MICROBLAZE=y
 # CONFIG_MMU is not set
@@ -96,7 +96,9 @@ CONFIG_DEFAULT_IOSCHED="cfq"
 # Platform options
 #
 CONFIG_PLATFORM_GENERIC=y
-CONFIG_HACK=y
+CONFIG_SELFMOD=y
+CONFIG_SELFMOD_INTC=y
+CONFIG_SELFMOD_TIMER=y
 CONFIG_OPT_LIB_FUNCTION=y
 CONFIG_ALLOW_EDIT_AUTO=y
 

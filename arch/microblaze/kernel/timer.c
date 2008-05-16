@@ -1,12 +1,10 @@
 /*
- * arch/microblaze/kernel/timer.c
+ * Copyright (C) 2007-2008 Michal Simek <monstr@monstr.eu>
+ * Copyright (C) 2006 Atmark Techno, Inc.
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License. See the file "COPYING" in the main directory of this archive
  * for more details.
- *
- * Copyright (C) 2007 Michal Simek <monstr@monstr.eu>
- * Copyright (C) 2006 Atmark Techno, Inc.
  */
 
 #include <linux/init.h>
@@ -22,10 +20,12 @@
 #include <asm/prom.h>
 #include <asm/irq.h>
 
-#ifdef CONFIG_HACK
-#include <asm/hack.h>
+#ifdef CONFIG_SELFMOD_TIMER
+#include <asm/selfmod.h>
+#define TIMER_BASE	BARRIER_BASE_ADDR
 #else
 static unsigned int timer_baseaddr;
+#define TIMER_BASE	timer_baseaddr
 #endif
 
 #define TCSR0	(0x00)
@@ -49,17 +49,14 @@ static unsigned int timer_baseaddr;
 
 static void timer_ack(void)
 {
-#ifdef CONFIG_HACK
-	iowrite32(ioread32(HACK_BASE_ADDR + TCSR0), HACK_BASE_ADDR + TCSR0);
-#else
-	iowrite32(ioread32(timer_baseaddr + TCSR0), timer_baseaddr + TCSR0);
-#endif
+	iowrite32(ioread32(TIMER_BASE + TCSR0), TIMER_BASE + TCSR0);
 }
 
 irqreturn_t timer_interrupt(int irq, void *dev_id)
 {
+#ifdef CONFIG_HEART_BEAT
 	heartbeat();
-
+#endif
 	timer_ack();
 
 	write_seqlock(&xtime_lock);
@@ -79,37 +76,14 @@ static struct irqaction timer_irqaction = {
 	.name = "timer",
 };
 
-unsigned long do_gettimeoffset(void)
-{
-#ifdef CONFIG_HACK
-	/* Current counter value */
-	unsigned int tcr = ioread32(HACK_BASE_ADDR + TCR0);
-
-	/* Load register value (couting down */
-	unsigned int tcmp = ioread32(HACK_BASE_ADDR + TLR0);
-#else
-	/* Current counter value */
-	unsigned int tcr = ioread32(timer_baseaddr + TCR0);
-
-	/* Load register value (couting down */
-	unsigned int tcmp = ioread32(timer_baseaddr + TLR0);
-#endif
-
-	/* Offset, in nanoseconds */
-	/* FIXME remove loading from structure - build in is faster */
-	unsigned long offset = (tcmp-tcr)/(cpuinfo.cpu_clock_freq/1000000);
-
-	return offset;
-}
-
-void system_timer_init(void)
+//void system_timer_init(void)
+void time_init(void)
 {
 	int irq, j = 0;
 	struct device_node *timer = NULL;
-#ifdef CONFIG_HACK
+#ifdef CONFIG_SELFMOD_TIMER
 	unsigned int timer_baseaddr = 0;
 	int arr_func[] = {
-				(int)&do_gettimeoffset,
 				(int)&timer_ack,
 				0
 			};
@@ -130,8 +104,8 @@ void system_timer_init(void)
 	timer_baseaddr = *(int *) of_get_property(timer, "reg", NULL);
 	timer_baseaddr = (unsigned long) ioremap(timer_baseaddr, PAGE_SIZE);
 	irq = *(int *) of_get_property(timer, "interrupts", NULL);
-#ifdef CONFIG_HACK
-	function_hack((int *) arr_func, timer_baseaddr);
+#ifdef CONFIG_SELFMOD_TIMER
+	selfmod_function((int *) arr_func, timer_baseaddr);
 #endif
 	printk(KERN_INFO "%s #0 at 0x%08x, irq=%d\n",
 		timer_list[j], timer_baseaddr, irq);

@@ -18,16 +18,34 @@ config PLATFORM_GENERIC
 
 endchoice
 
-config HACK
-	bool "Increase performance"
+config SELFMOD
+	bool "Use self modified code for intc/timer"
+	depends on EXPERIMENTAL
+	default n
+	help
+	  This choice enables self-modified code for interrupt controller
+	  and timer.
+
+config SELFMOD_INTC
+	bool "Use self modified code for intc"
+	depends on SELFMOD
 	default y
+	help
+	  This choice enables self-modified code for interrupt controller.
+
+config SELFMOD_TIMER
+	bool "Use self modified code for timer"
+	depends on SELFMOD
+	default y
+	help
+	  This choice enables self-modified code for timer.
 
 config OPT_LIB_FUNCTION
 	bool "Optimalized lib function"
 	default y
 	help
 	  Allows turn on optimalized library function (memcpy and memmove).
-	  They are optimized by using unsigned alignment. This will work
+	  They are optimized by using word alignment. This will work
 	  fine if both source and destination are aligned on the same
 	  boundary. However, if they are aligned on different boundaries
 	  shifts will be necessary. This might result in bad performance
@@ -49,10 +67,6 @@ config ALLOW_EDIT_AUTO
 
 	  If unsure, say no.
 
-# Ok, the platform is chosen. Source the kconfig.auto to get all of the
-# system settings.
-# If user selected CONFIG_EDIT_AUTO, these will be rendered in gory detail
-# and be able to be edited
 comment "Automatic platform settings from Kconfig.auto"
 	depends on ALLOW_EDIT_AUTO
 

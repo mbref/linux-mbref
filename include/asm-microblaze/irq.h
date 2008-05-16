@@ -1,22 +1,19 @@
 /*
- * include/asm-microblaze/irq.h
+ * Copyright (C) 2006 Atmark Techno, Inc.
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License. See the file "COPYING" in the main directory of this archive
  * for more details.
- *
- * Copyright (C) 2006 Atmark Techno, Inc.
  */
 
 #ifndef _ASM_MICROBLAZE_IRQ_H
 #define _ASM_MICROBLAZE_IRQ_H
 
-#include <linux/seq_file.h>
 #define NR_IRQS 32
-#include <linux/irq.h>
 
-extern unsigned int NR_IRQ;
-extern void ledoff(void);
+#include <linux/interrupt.h>
+
+extern unsigned int nr_irq;
 
 #define NO_IRQ (-1)
 
@@ -28,7 +25,6 @@ static inline int irq_canonicalize(int irq)
 struct pt_regs;
 extern void do_IRQ(struct pt_regs *regs);
 extern void __init init_IRQ(void);
-int show_interrupts(struct seq_file *p, void *v);
 irqreturn_t timer_interrupt(int irq, void *dev_id);
 
 /* irq_of_parse_and_map - Parse and Map an interrupt into linux virq space
