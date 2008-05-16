@@ -67,7 +67,7 @@ void __init setup_cpuinfo(void)
 	case 0:
 		printk(KERN_WARNING
 			"%s: No PVR support. Using static CPU info from FDT\n",
-			__FUNCTION__);
+			__func__);
 		set_cpuinfo_static(&cpuinfo, cpu);
 		break;
 /* FIXME I found weird behavior with MB 7.00.a/b
@@ -75,7 +75,7 @@ void __init setup_cpuinfo(void)
 #if 0
 	case 1:
 		printk(KERN_INFO "%s: Using full CPU PVR support\n",
-			__FUNCTION__);
+			__func__);
 		set_cpuinfo_pvr_full(&cpuinfo, cpu);
 		break;
 #endif

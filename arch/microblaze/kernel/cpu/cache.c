@@ -1,5 +1,4 @@
 /*
- * arch/microblaze/kernel/cpu/cache.c
  * Cache control for MicroBlaze cache memories
  *
  * Copyright (C) 2007 Michal Simek <monstr@monstr.eu>
@@ -129,7 +128,7 @@ void _invalidate_dcache(unsigned int addr)
 				: "r" (addr));
 }
 
-void __flush_icache_all(void)
+void __invalidate_icache_all(void)
 {
 	unsigned int i;
 	unsigned flags;
@@ -149,7 +148,7 @@ void __flush_icache_all(void)
 	}
 }
 
-void __flush_icache_range(unsigned long start, unsigned long end)
+void __invalidate_icache_range(unsigned long start, unsigned long end)
 {
 	unsigned int i;
 	unsigned flags;
@@ -177,24 +176,24 @@ void __flush_icache_range(unsigned long start, unsigned long end)
 	}
 }
 
-void __flush_icache_page(struct vm_area_struct *vma, struct page *page)
+void __invalidate_icache_page(struct vm_area_struct *vma, struct page *page)
 {
-	__flush_icache_all();
+	__invalidate_icache_all();
 }
 
-void __flush_icache_user_range(struct vm_area_struct *vma,
+void __invalidate_icache_user_range(struct vm_area_struct *vma,
 				struct page *page, unsigned long adr,
 				int len)
 {
-	__flush_icache_all();
+	__invalidate_icache_all();
 }
 
-void __flush_cache_sigtramp(unsigned long addr)
+void __invalidate_cache_sigtramp(unsigned long addr)
 {
-	__flush_icache_range(addr, addr + 8);
+	__invalidate_icache_range(addr, addr + 8);
 }
 
-void __flush_dcache_all(void)
+void __invalidate_dcache_all(void)
 {
 	unsigned int i;
 	unsigned flags;
@@ -216,7 +215,7 @@ void __flush_dcache_all(void)
 	}
 }
 
-void __flush_dcache_range(unsigned long start, unsigned long end)
+void __invalidate_dcache_range(unsigned long start, unsigned long end)
 {
 	unsigned int i;
 	unsigned flags;
@@ -243,14 +242,14 @@ void __flush_dcache_range(unsigned long start, unsigned long end)
 	}
 }
 
-void __flush_dcache_page(struct vm_area_struct *vma, struct page *page)
+void __invalidate_dcache_page(struct vm_area_struct *vma, struct page *page)
 {
-	__flush_dcache_all();
+	__invalidate_dcache_all();
 }
 
-void __flush_dcache_user_range(struct vm_area_struct *vma,
+void __invalidate_dcache_user_range(struct vm_area_struct *vma,
 				struct page *page, unsigned long adr,
 				int len)
 {
-	__flush_dcache_all();
+	__invalidate_dcache_all();
 }
