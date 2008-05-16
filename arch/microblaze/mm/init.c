@@ -5,9 +5,11 @@
  * License. See the file "COPYING" in the main directory of this archive
  * for more details.
  *
- * Copyright (C) 2007 Michal Simek <monstr@monstr.eu>
+ * Copyright (C) 2007-2008 Michal Simek <monstr@monstr.eu>
  * Copyright (C) 2006 Atmark Techno, Inc.
  */
+
+#undef DEBUG
 
 #include <linux/autoconf.h>
 #include <linux/init.h>
@@ -16,21 +18,19 @@
 #include <linux/swap.h>
 #include <linux/bootmem.h>
 #include <linux/pfn.h>
-#include <asm/sections.h>
+#include <linux/lmb.h>
 
-#include <asm/lmb.h>
+#include <asm/sections.h>
 #include <asm/uaccess.h>
 #include <asm/system.h>
 #include <asm/pgtable.h>
-
-#undef DEBUG
 
 char *klimit = _end;
 static unsigned int memory_start;
 static unsigned int memory_end;
 
 unsigned int __page_offset;
-EXPORT_SYMBOL(__page_offset);
+/* EXPORT_SYMBOL(__page_offset); */
 
 void __init setup_memory(void)
 {
@@ -48,7 +48,7 @@ void __init setup_memory(void)
 			(((int)_text >> PAGE_SHIFT) <= end_pfn)) {
 			memory_end = (end_pfn << PAGE_SHIFT) - 1;
 			PAGE_OFFSET = memory_start = start_pfn << PAGE_SHIFT;
-			pr_debug("%s: Main mem: 0x%x-0x%x\n", __FUNCTION__,
+			pr_debug("%s: Main mem: 0x%x-0x%x\n", __func__,
 				memory_start, memory_end);
 			break;
 		}
@@ -75,16 +75,16 @@ void __init setup_memory(void)
 	start = PFN_DOWN((int)_text) << PAGE_SHIFT;
 	end = PAGE_ALIGN((unsigned long)klimit);
 	lmb_reserve(start, end - start);
-	pr_debug("%s: kernel addr 0x%08x-0x%08x\n", __FUNCTION__, start, end);
+	pr_debug("%s: kernel addr 0x%08x-0x%08x\n", __func__, start, end);
 
 	/* calculate free pages, etc. */
 	min_low_pfn = PFN_UP(start_pfn << PAGE_SHIFT);
 	max_mapnr = PFN_DOWN((end_pfn << PAGE_SHIFT));
 	max_low_pfn = max_mapnr - min_low_pfn;
 	num_physpages = max_mapnr - min_low_pfn + 1;
-	printk(KERN_INFO "%s: max_mapnr: %#lx\n", __FUNCTION__, max_mapnr);
-	printk(KERN_INFO "%s: min_low_pfn: %#lx\n", __FUNCTION__, min_low_pfn);
-	printk(KERN_INFO "%s: max_low_pfn: %#lx\n", __FUNCTION__, max_low_pfn);
+	printk(KERN_INFO "%s: max_mapnr: %#lx\n", __func__, max_mapnr);
+	printk(KERN_INFO "%s: min_low_pfn: %#lx\n", __func__, min_low_pfn);
+	printk(KERN_INFO "%s: max_low_pfn: %#lx\n", __func__, max_low_pfn);
 
 	/* add place for data pages */
 	map_size = init_bootmem_node(NODE_DATA(0), PFN_UP(end),
@@ -96,7 +96,7 @@ void __init setup_memory(void)
 			((end_pfn - start_pfn) << PAGE_SHIFT) - 1);
 
 	/* reserve allocate blocks */
-	for (i = 1; i < lmb.reserved.cnt; i++) {
+	for (i = 0; i < lmb.reserved.cnt; i++) {
 		pr_debug("reserved %d - 0x%08x-0x%08x\n", i,
 			(u32) lmb.reserved.region[i].base,
 			(u32) lmb_size_bytes(&lmb.reserved, i));
@@ -161,7 +161,7 @@ void free_initmem(void)
 /* FIXME from arch/powerpc/mm/mem.c*/
 void show_mem(void)
 {
-	printk(KERN_NOTICE "%s\n", __FUNCTION__);
+	printk(KERN_NOTICE "%s\n", __func__);
 }
 
 void __init mem_init(void)

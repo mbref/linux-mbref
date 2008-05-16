@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.24
-# Fri May 16 10:27:36 2008
+# Fri May 16 10:35:22 2008
 #
 CONFIG_MICROBLAZE=y
 # CONFIG_MMU is not set
@@ -630,3 +630,4 @@ CONFIG_CRYPTO_HW=y
 CONFIG_ZLIB_INFLATE=y
 CONFIG_HAS_IOMEM=y
 CONFIG_HAS_IOPORT=y
+CONFIG_HAVE_LMB=y
