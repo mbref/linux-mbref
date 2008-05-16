@@ -34,10 +34,6 @@ MODULE_DEVICE_TABLE(of, ulite_of_match);
 
 #endif
 
-#define pr_debug printk
-#define dev_dbg printk
-#define dev_err printk
-
 #define ULITE_NAME		"ttyUL"
 #define ULITE_MAJOR		204
 #define ULITE_MINOR		187
@@ -476,8 +472,6 @@ static int __devinit ulite_assign(struct device *dev, int id, u32 base, int irq)
 	struct uart_port *port;
 	int rc;
 
-	printk("%s id %d base 0x%08x, irq %d\n",__FUNCTION__, id, base, irq);
-
 	/* if id = -1; then scan for a free id and use that */
 	if (id < 0) {
 		for (id = 0; id < ULITE_NR_UARTS; id++)
@@ -551,8 +545,6 @@ static int __devinit ulite_probe(struct platform_device *pdev)
 {
 	struct resource *res, *res2;
 
-	printk("%s\n",__FUNCTION__);
-
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res)
 		return -ENODEV;
@@ -561,7 +553,7 @@ static int __devinit ulite_probe(struct platform_device *pdev)
 	if (!res2)
 		return -ENODEV;
 
-	return ulite_assign(&pdev->dev, pdev->id, res->start + 3, res2->start);
+	return ulite_assign(&pdev->dev, pdev->id, res->start, res2->start);
 }
 
 static int __devexit ulite_remove(struct platform_device *pdev)
@@ -592,9 +584,7 @@ ulite_of_probe(struct of_device *op, const struct of_device_id *match)
 	const unsigned int *id;
 	int irq, rc;
 
-	printk("%s ----------------------------- \n",__FUNCTION__);
-
-	dev_dbg(&op->dev, "%s(%p, %p)\n", __FUNCTION__, op, match);
+	dev_dbg(&op->dev, "%s(%p, %p)\n", __func__, op, match);
 
 	rc = of_address_to_resource(op->node, 0, &res);
 	if (rc) {
@@ -606,48 +596,8 @@ ulite_of_probe(struct of_device *op, const struct of_device_id *match)
 
 	id = of_get_property(op->node, "port-number", NULL);
 
-	return ulite_assign(&op->dev, id ? *id : -1, res.start + 3, irq);
+	return ulite_assign(&op->dev, id ? *id : -1, res.start+3, irq);
 }
-
-#if 1
-static int __init register_uartlite(struct device_node *np, int i) {
-	struct platform_device *pdev;
-        struct resource r[2];
-	const unsigned int *id;
-
-	int ret;
-	int irq, rc;
-
-
-        memset(r, 0, sizeof(r));
-
-        ret = of_address_to_resource(np, 0, &r[0]);
-        if (ret) {
-            return ret;
-        }
-
-        of_irq_to_resource(np, 0, &r[1]);
-
-	irq = irq_of_parse_and_map(np, 0);
-	id = of_get_property(np, "port-number", NULL);
-	printk("%d - irq %d\n",irq,id);
-
-
-        pdev = platform_device_register_simple("uartlite", i, r, 2);
-
-//struct platform_device *platform_device_register_simple(char *name, int id,
-//							struct resource *res, unsigned int num)
-
-//int driver_register(struct device_driver * drv)
-
-
-	printk("end of simple\n");
-        if (IS_ERR(pdev)) {
-            return PTR_ERR(pdev);
-        }
-        return 0;
-}
-#endif
 
 static int __devexit ulite_of_remove(struct of_device *op)
 {
@@ -668,45 +618,8 @@ static struct of_platform_driver ulite_of_driver = {
 /* Registration helpers to keep the number of #ifdefs to a minimum */
 static inline int __init ulite_of_register(void)
 {
-	struct device_node *np;
-	unsigned int i;
-	int ret;
-
 	pr_debug("uartlite: calling of_register_platform_driver()\n");
-	ret = of_register_platform_driver(&ulite_of_driver); // zaregistruje strukturu
-
-
-//of_register_platform_driver(struct of_platform_driver *drv)
-//-> of_register_driver(drv, &of_platform_bus_type);
-//  ->
-//potrebuji: of_platform_device_probe(struct device *dev)
-//return of_register_driver(drv, &of_platform_bus_type);
-//	ulite_of_probe()
-	printk("ret %d\n",ret);
-
-
-
-	for (np = NULL, i = 0;
-	     (np = of_find_compatible_node(np, NULL, "xlnx,opb-uartlite")) != NULL;
-	     i++) {
-		ret = register_uartlite(np, i);
-		if (ret) {
-			goto err;
-		}
-	}
-
-	for (np = NULL;
-	     (np = of_find_compatible_node(np, NULL, "xlnx,xps-uartlite")) != NULL;
-	     i++) {
-		ret = register_uartlite(np, i);
-		if (ret) {
-			goto err;
-		}
-	}
-
-	return 0;
-err:
-	return ret;
+	return of_register_platform_driver(&ulite_of_driver);
 }
 
 static inline void __exit ulite_of_unregister(void)

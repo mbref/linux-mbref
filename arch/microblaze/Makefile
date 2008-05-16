@@ -44,8 +44,8 @@ LIBGCC := $(shell $(CC) $(CFLAGS) -print-libgcc-file-name)
 
 head-y		:= arch/microblaze/kernel/head.o
 libs-y		+= arch/microblaze/lib/ $(LIBGCC)
-core-y		+= arch/microblaze/kernel/ arch/microblaze/mm/
-#		   arch/microblaze/platform/
+core-y		+= arch/microblaze/kernel/ arch/microblaze/mm/ \
+		   arch/microblaze/platform/
 
 boot := arch/$(ARCH)/boot
 
