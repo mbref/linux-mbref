@@ -11,6 +11,8 @@
 #ifndef _ASM_MICROBLAZE_DELAY_H
 #define _ASM_MICROBLAZE_DELAY_H
 
+extern unsigned long loops_per_jiffy;
+
 extern inline void __delay(unsigned long loops)
 {
 	asm volatile ("# __delay		\n\t"		\

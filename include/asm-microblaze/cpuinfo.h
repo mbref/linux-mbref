@@ -15,8 +15,6 @@
 
 #include <asm/prom.h>
 
-extern unsigned long loops_per_jiffy;
-
 /* CPU Version and FPGA Family code conversion table type */
 struct cpu_ver_key {
 	const char *s;
