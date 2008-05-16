@@ -1,6 +1,4 @@
 /*
- * arch/microblaze/kernel/cpu/cpuinfo-static.c
- *
  * Copyright (C) 2007-2008 Michal Simek <monstr@monstr.eu>
  * Copyright (C) 2007 John Williams <john.williams@petalogix.com>
  * Copyright (C) 2007 PetaLogix

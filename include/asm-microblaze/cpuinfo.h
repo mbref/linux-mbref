@@ -1,6 +1,4 @@
 /*
- * include/asm-microblaze/cpuinfo.h
- *
  * Generic support for queying CPU info
  *
  * Copyright (C) 2007-2008 Michal Simek <monstr@monstr.eu>
@@ -10,7 +8,6 @@
  * This file is subject to the terms and conditions of the GNU General
  * Public License. See the file COPYING in the main directory of this
  * archive for more details.
- *
  */
 
 #ifndef _ASM_MICROBLAZE_CPUINFO_H
@@ -104,8 +101,7 @@ extern struct cpuinfo cpuinfo;
 void setup_cpuinfo(void);
 
 void set_cpuinfo_static(struct cpuinfo *ci, struct device_node *cpu);
-void set_cpuinfo_pvr_partial(struct cpuinfo *ci);
-void set_cpuinfo_pvr_full(struct cpuinfo *ci);
+void set_cpuinfo_pvr_full(struct cpuinfo *ci, struct device_node *cpu);
 
 static inline unsigned int fcpu(struct device_node *cpu, char *n)
 {

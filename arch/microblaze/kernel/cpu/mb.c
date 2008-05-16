@@ -1,6 +1,4 @@
 /*
- * arch/microblaze/kernel/cpu/mb.c
- *
  * CPU-version specific code
  *
  * This file is subject to the terms and conditions of the GNU General Public
@@ -24,6 +22,7 @@
 #include <asm/io.h>
 #include <asm/bug.h>
 #include <asm/param.h>
+//#include <asm/delay.h>
 
 static int show_cpuinfo(struct seq_file *m, void *v)
 {

@@ -1,6 +1,4 @@
 /*
- * arch/microblaze/kernel/cpu/cpuinfo.c
- *
  * Copyright (C) 2007-2008 Michal Simek <monstr@monstr.eu>
  * Copyright (C) 2007 John Williams <john.williams@petalogix.com>
  * Copyright (C) 2007 PetaLogix
@@ -72,16 +70,13 @@ void __init setup_cpuinfo(void)
 			__FUNCTION__);
 			set_cpuinfo_static(&cpuinfo, cpu);
 		break;
+/* FIXME I found weird behavior with MB 7.00.a/b
+ * please do not use FULL PVR with MMU */
 #if 0
 	case 1:
-		set_cpuinfo_pvr_partial(cpuinfo);
-		break;
-/* FIXME I found weird behavior with MB 7 */
-	case 2:
 		printk(KERN_INFO "%s: Using full CPU PVR support\n",
 			__FUNCTION__);
-		set_cpuinfo_pvr_full(&cpuinfo);
-		cpuinfo.cpu_clock_freq = fcpu(cpu, "timebase-frequency");
+		set_cpuinfo_pvr_full(&cpuinfo, cpu);
 		break;
 #endif
 	default:

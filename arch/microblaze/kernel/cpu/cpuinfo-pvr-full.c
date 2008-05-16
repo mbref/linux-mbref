@@ -1,6 +1,4 @@
 /*
- * arch/microblaze/kernel/cpu/cpuinfo-pvr-full.c
- *
  * Support for MicroBlaze PVR (processor version register)
  *
  * Copyright (C) 2007 John Williams <john.williams@petalogix.com>
@@ -25,7 +23,7 @@
 
 #define CI(c, p) ci->c = PVR_##p(pvr)
 
-void set_cpuinfo_pvr_full(struct cpuinfo *ci)
+void set_cpuinfo_pvr_full(struct cpuinfo *ci, struct device_node *cpu)
 {
 	struct pvr_s pvr;
 	get_pvr(&pvr);
@@ -80,4 +78,7 @@ void set_cpuinfo_pvr_full(struct cpuinfo *ci)
 	CI(num_wr_brk, NUMBER_OF_WR_ADDR_BRK);
 
 	CI(fpga_family_code, TARGET_FAMILY);
+
+	/* take timebase-frequency from DTS */
+//	ci->cpu_clock_freq = fcpu(cpu, "timebase-frequency");
 }
