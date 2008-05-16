@@ -61,14 +61,14 @@ void __init setup_cpuinfo(void)
 	if (!cpu)
 		printk(KERN_ERR "You don't have cpu!!!\n");
 
-	printk(KERN_INFO "%s: initialising\n", __FUNCTION__);
+	printk(KERN_INFO "%s: initialising\n", __func__);
 
 	switch (cpu_has_pvr()) {
 	case 0:
 		printk(KERN_WARNING
 			"%s: No PVR support. Using static CPU info from FDT\n",
 			__FUNCTION__);
-			set_cpuinfo_static(&cpuinfo, cpu);
+		set_cpuinfo_static(&cpuinfo, cpu);
 		break;
 /* FIXME I found weird behavior with MB 7.00.a/b
  * please do not use FULL PVR with MMU */

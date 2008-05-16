@@ -1,11 +1,13 @@
 /*
- * arch/microblaze/kernel/cpu/pvr.c
- *
  * Support for MicroBlaze PVR (processor version register)
  *
  * Copyright (C) 2007 Michal Simek <monstr@monstr.eu>
  * Copyright (C) 2007 John Williams <john.williams@petalogix.com>
  * Copyright (C) 2007 PetaLogix
+ *
+ * This file is subject to the terms and conditions of the GNU General Public
+ * License. See the file "COPYING" in the main directory of this archive
+ * for more details.
  */
 
 #include <linux/kernel.h>
@@ -45,25 +47,21 @@ int cpu_has_pvr(void)
 {
 	unsigned flags;
 	unsigned pvr0;
-	int ret = 0;
 
-	local_irq_save(flags);
+	local_save_flags(flags);
 
 	/* PVR bit in MSR tells us if there is any support */
 	if (!(flags & PVR_MSR_BIT))
-		goto out;
+		return 0;
 
 	get_single_pvr(0x00, pvr0);
-	pr_debug("%s: pvr0 is 0x%08x\n", __FUNCTION__, pvr0);
+	pr_debug("%s: pvr0 is 0x%08x\n", __func__, pvr0);
 
 	if (pvr0 & PVR0_PVR_FULL_MASK)
-		ret = 2;
-	else
-		ret = 1;
+		return 1;
 
-out:
-	local_irq_restore(flags);
-	return ret;
+	/* for partial PVR use static cpuinfo */
+	return 2;
 }
 
 void get_pvr(struct pvr_s *p)

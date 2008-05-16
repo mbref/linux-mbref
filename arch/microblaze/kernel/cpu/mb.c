@@ -22,7 +22,7 @@
 #include <asm/io.h>
 #include <asm/bug.h>
 #include <asm/param.h>
-//#include <asm/delay.h>
+#include <asm/delay.h>
 
 static int show_cpuinfo(struct seq_file *m, void *v)
 {
