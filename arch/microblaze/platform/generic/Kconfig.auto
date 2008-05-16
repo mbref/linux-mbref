@@ -33,11 +33,6 @@ config KERNEL_BASE_ADDR
 	help
 	  BASE Address for kernel
 
-config XILINX_ERAM_SIZE
-	hex "Memory size of XILINX_RAM" 
-	depends on XILINX_UNCACHED_SHADOW
-	default 0x02000000
-
 config XILINX_MICROBLAZE0_FAMILY
        string "Targetted FPGA family" if ALLOW_EDIT_AUTO
        default spartan3e

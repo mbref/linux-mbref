@@ -103,7 +103,7 @@ ENTRY(sys_call_table)
 	.long sys_fstatfs		/* 100 */
 	.long sys_ni_syscall		/* ioperm */
 	.long sys_socketcall
-	.long sys_syslog
+	.long sys_syslog		/* operation with system console */
 	.long sys_setitimer
 	.long sys_getitimer		/* 105 */
 	.long sys_newstat
