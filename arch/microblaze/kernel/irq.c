@@ -1,11 +1,9 @@
 /*
- * arch/microblaze/kernel/process.c
+ * Copyright (C) 2006 Atmark Techno, Inc.
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License. See the file "COPYING" in the main directory of this archive
  * for more details.
- *
- * Copyright (C) 2006 Atmark Techno, Inc.
  */
 
 #include <linux/init.h>
@@ -15,18 +13,18 @@
 #include <linux/irqflags.h>
 #include <linux/seq_file.h>
 #include <linux/kernel_stat.h>
+#include <linux/irq.h>
 
-#include <asm/irq.h>
 #include <asm/prom.h>
 
 unsigned int irq_of_parse_and_map(struct device_node *dev, int index)
 {
-        struct of_irq oirq;
+	struct of_irq oirq;
 
-        if (of_irq_map_one(dev, index, &oirq))
-                return NO_IRQ;
+	if (of_irq_map_one(dev, index, &oirq))
+		return NO_IRQ;
 
-        return oirq.specifier[0];
+	return oirq.specifier[0];
 }
 EXPORT_SYMBOL_GPL(irq_of_parse_and_map);
 
@@ -42,13 +40,15 @@ void ack_bad_irq(unsigned int irq)
 void do_IRQ(struct pt_regs *regs)
 {
 	unsigned int irq;
+	struct irq_desc *desc;
 
 	irq_enter();
 	set_irq_regs(regs);
 	irq = get_irq(regs);
 	BUG_ON(irq == -1U);
-	__do_IRQ(irq);
-
+	desc = irq_desc + irq;
+	desc->handle_irq(irq, desc);
+	desc->chip->end(irq);
 	irq_exit();
 }
 
@@ -91,10 +91,3 @@ skip:
 	}
 	return 0;
 }
-
-/*unsigned int irq_of_parse_and_map(struct device_node *dev, int index)
-{
-	printk ("ERROR %s\n",__FUNCTION__);
-	return 0;
-}
-EXPORT_SYMBOL_GPL(irq_of_parse_and_map);*/

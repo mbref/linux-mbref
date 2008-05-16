@@ -1,13 +1,12 @@
 /*
- * arch/microblaze/kernel/intc.c
+ * Copyright (C) 2007 Michal Simek <monstr@monstr.eu>
+ * Copyright (C) 2006 Atmark Techno, Inc.
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License. See the file "COPYING" in the main directory of this archive
  * for more details.
- *
- * Copyright (C) 2007 Michal Simek <monstr@monstr.eu>
- * Copyright (C) 2006 Atmark Techno, Inc.
  */
+
 #include <linux/init.h>
 #include <linux/irq.h>
 #include <linux/autoconf.h>
@@ -101,7 +100,7 @@ static struct irq_chip intc_dev = {
 	.name = "INTC",
 	.enable = intc_enable,
 	.disable = intc_disable,
-	.ack = intc_disable_and_ack,
+	.mask_ack  = intc_disable_and_ack,
 	.end = intc_end,
 };
 
@@ -126,8 +125,8 @@ unsigned int get_irq(struct pt_regs *regs)
 
 void __init init_IRQ(void)
 {
-	int i, j = 0;
-	int handle = 0x010;
+	int i, j, intr_type;
+
 	struct device_node *intc = NULL;
 #ifdef CONFIG_HACK
 	unsigned int intc_baseaddr = 0;
@@ -157,11 +156,12 @@ void __init init_IRQ(void)
 	intc_baseaddr = *(int *) of_get_property(intc, "reg", NULL);
 	intc_baseaddr = (unsigned long) ioremap(intc_baseaddr, PAGE_SIZE);
 	NR_IRQ = *(int *) of_get_property(intc, "xlnx,num-intr-inputs", NULL);
+	intr_type = *(int *) of_get_property(intc, "xlnx,kind-of-edge", NULL);
 #ifdef CONFIG_HACK
 	function_hack((int *) arr_func, intc_baseaddr);
 #endif
-	printk(KERN_INFO "%s #0 at 0x%08x, irq=%d\n",
-		intc_list[j], intc_baseaddr, handle);
+	printk(KERN_INFO "%s #0 at 0x%08x, num_irq=%d, edge=0x%x\n",
+		intc_list[j], intc_baseaddr, NR_IRQ, intr_type);
 
 	/*
 	 * Disable all external interrupts until they are
@@ -173,14 +173,17 @@ void __init init_IRQ(void)
 	iowrite32(0xffffffff, intc_baseaddr + IAR);
 
 	/* Turn on the Master Enable. */
-	iowrite32(MER_HIE|MER_ME, intc_baseaddr + MER);
+	iowrite32(MER_HIE | MER_ME, intc_baseaddr + MER);
 
 	for (i = 0; i < NR_IRQ; ++i) {
-		irq_desc[i].chip = &intc_dev;
-
-		if (handle & (0x00000001 << i))
+		if (intr_type & (0x00000001 << i)) {
+		        set_irq_chip_and_handler_name(i, &intc_dev,
+				handle_edge_irq, intc_dev.name);
 			irq_desc[i].status &= ~IRQ_LEVEL;
-		else
+		} else {
+		        set_irq_chip_and_handler_name(i, &intc_dev,
+				handle_level_irq, intc_dev.name);
 			irq_desc[i].status |= IRQ_LEVEL;
+		}
 	}
 }
