@@ -1,12 +1,10 @@
 /*
- * arch/microblaze/kernel/asm-offset.c
+ * Copyright (C) 2007 PetaLogix
+ * Copyright (C) 2006 Atmark Techno, Inc.
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License. See the file "COPYING" in the main directory of this archive
  * for more details.
- *
- * Copyright (C) 2007 PetaLogix
- * Copyright (C) 2006 Atmark Techno, Inc.
  */
 
 #include <linux/stddef.h>
@@ -85,7 +83,7 @@ int main(int argc, char *argv[])
 	BLANK();
 
 	/* struct cpu_context */
-	DEFINE(CC_SP, offsetof(struct cpu_context, r1));
+	DEFINE(CC_SP, offsetof(struct cpu_context, r1)); /* r1 */
 	DEFINE(CC_R2, offsetof(struct cpu_context, r2));
 	/* dedicated registers */
 	DEFINE(CC_R13, offsetof(struct cpu_context, r13));

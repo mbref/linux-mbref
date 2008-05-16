@@ -1,5 +1,5 @@
 /*
- * arch/microblaze/kernel/ptrace.c -- `ptrace' system call
+ * `ptrace' system call
  *
  * Copyright (C) 2008 Michal Simek <monstr@monstr.eu>
  * Copyright (C) 2007 PetaLogix
@@ -116,11 +116,10 @@ long arch_ptrace(struct task_struct *child, long request, long addr, long data)
 			}
 		} else if (addr >= 0 && addr < PT_SIZE && (addr & 0x3) == 0) {
 			microblaze_reg_t *reg_addr = reg_save_addr(addr, child);
-			if (request == PTRACE_PEEKUSR) {
+			if (request == PTRACE_PEEKUSR)
 				val = *reg_addr;
-			} else {
+			else
 				*reg_addr = data;
-			}
 		} else
 			rval = -EIO;
 

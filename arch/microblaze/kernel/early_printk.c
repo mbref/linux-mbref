@@ -1,13 +1,15 @@
 /*
- * arch/microblaze/kernel/early_printk.c
- *
- * Copyright (C) 2007 Michal Simek <monstr@monstr.eu>
- * Copyright (C) 2003-2006 Yasushi SHOJI <yashi@atmark-techno.com>
- *
  * Early printk support for Microblaze.
  *
- * Once we got some system without uart light, we need to refactor.
+ * Copyright (C) 2007-2008 Michal Simek <monstr@monstr.eu>
+ * Copyright (C) 2003-2006 Yasushi SHOJI <yashi@atmark-techno.com>
+ *
+ * This file is subject to the terms and conditions of the GNU General Public
+ * License. See the file "COPYING" in the main directory of this archive
+ * for more details.
  */
+
+/* FIXME Once we got some system without uart light, we need to refactor */
 
 #include <linux/console.h>
 #include <linux/kernel.h>
@@ -29,8 +31,21 @@
 
 static void early_printk_putc(char c)
 {
-	while (ioread32(STATUS) & (1<<3));
-	iowrite32((c & 0xff), TX_FIFO);
+	/*
+	 * Limit how many times we'll spin waiting for TX FIFO status.
+	 * This will prevent lockups if the base address is incorrectly
+	 * set, or any other issue on the UARTLITE.
+	 * This limit is pretty arbitrary, unless we are at about 10 baud
+	 * we'll never timeout on a working UART. 
+	 */
+
+	unsigned retries = 10000;
+	while (retries-- && (ioread32(STATUS) & (1<<3)))
+		;
+
+	/* Only attempt the iowrite if we didn't timeout */
+	if(retries)
+		iowrite32((c & 0xff), TX_FIFO);
 }
 
 static void early_printk_write(struct console *unused,

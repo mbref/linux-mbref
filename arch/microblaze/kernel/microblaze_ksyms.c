@@ -1,6 +1,4 @@
 /*
- * arch/microblaze/kernel/microblaze_ksyms.c
- *
  * Copyright (C) 2008 Michal Simek <monstr@monstr.eu>
  *
  * This program is free software; you can redistribute it and/or modify

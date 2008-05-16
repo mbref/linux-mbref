@@ -1,6 +1,4 @@
 /*
- * linux/arch/microblaze/kernel/module.c
- *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
@@ -17,23 +15,20 @@
 
 #include <asm/pgtable.h>
 
-#if 0
-#define DBPRINTK(...) printk(__VA_ARGS__)
-#else
-#define DBPRINTK(...)
-#endif
+#undef DEBUG
 
 void *module_alloc(unsigned long size)
 {
 	void *ret;
 	ret = (size == 0) ? NULL : vmalloc(size);
-	DBPRINTK("module_alloc (%08lx@%08lx)\n", size, (unsigned long int)ret);
+	pr_debug("module_alloc (%08lx@%08lx)\n", size, (unsigned long int)ret);
 	return ret;
 }
 
 void module_free(struct module *module, void *region)
 {
-	DBPRINTK("module_free(%s,%08lx)\n", module->name, region);
+	pr_debug("module_free(%s,%08lx)\n", module->name,
+					(unsigned long)region);
 	vfree(region);
 }
 
@@ -45,9 +40,8 @@ int module_frob_arch_sections(Elf_Ehdr *hdr,
 	return 0;
 }
 
-int
-apply_relocate(Elf32_Shdr * sechdrs, const char *strtab, unsigned int symindex,
-		unsigned int relsec, struct module *module)
+int apply_relocate(Elf32_Shdr *sechdrs, const char *strtab,
+	unsigned int symindex, unsigned int relsec, struct module *module)
 {
 
 	printk(KERN_ERR "module %s: ADD RELOCATION unsupported\n",
@@ -56,8 +50,7 @@ apply_relocate(Elf32_Shdr * sechdrs, const char *strtab, unsigned int symindex,
 
 }
 
-int
-apply_relocate_add(Elf32_Shdr * sechdrs, const char *strtab,
+int apply_relocate_add(Elf32_Shdr *sechdrs, const char *strtab,
 	unsigned int symindex, unsigned int relsec, struct module *module)
 {
 
@@ -69,7 +62,7 @@ apply_relocate_add(Elf32_Shdr * sechdrs, const char *strtab,
 	unsigned long int value;
 	unsigned long int old_value;
 
-	DBPRINTK("Applying add relocation section %u to %u\n",
+	pr_debug("Applying add relocation section %u to %u\n",
 		relsec, sechdrs[relsec].sh_info);
 
 	for (i = 0; i < sechdrs[relsec].sh_size / sizeof(*rela); i++) {
@@ -92,7 +85,7 @@ apply_relocate_add(Elf32_Shdr * sechdrs, const char *strtab,
 		case R_MICROBLAZE_32:
 			old_value = *location;
 			*location = value + old_value;
-			DBPRINTK("R_MICROBLAZE_32 (%08lx->%08lx)\n",
+			pr_debug("R_MICROBLAZE_32 (%08lx->%08lx)\n",
 				old_value, value);
 			break;
 
@@ -104,7 +97,7 @@ apply_relocate_add(Elf32_Shdr * sechdrs, const char *strtab,
 					(value >> 16);
 			location[1] = (location[1] & 0xFFFF0000) |
 					(value & 0xFFFF);
-			DBPRINTK("R_MICROBLAZE_64 (%08lx->%08lx)\n",
+			pr_debug("R_MICROBLAZE_64 (%08lx->%08lx)\n",
 				old_value, value);
 			break;
 
@@ -117,12 +110,12 @@ apply_relocate_add(Elf32_Shdr * sechdrs, const char *strtab,
 					(value >> 16);
 			location[1] = (location[1] & 0xFFFF0000) |
 					(value & 0xFFFF);
-			DBPRINTK("R_MICROBLAZE_64_PCREL (%08lx)\n",
+			pr_debug("R_MICROBLAZE_64_PCREL (%08lx)\n",
 				value);
 			break;
 
 		case R_MICROBLAZE_NONE:
-			DBPRINTK("R_MICROBLAZE_NONE\n");
+			pr_debug("R_MICROBLAZE_NONE\n");
 			break;
 
 		default:
@@ -136,14 +129,12 @@ apply_relocate_add(Elf32_Shdr * sechdrs, const char *strtab,
 	return 0;
 }
 
-int
-module_finalize(const Elf32_Ehdr * hdr, const Elf_Shdr *sechdrs,
+int module_finalize(const Elf32_Ehdr *hdr, const Elf_Shdr *sechdrs,
 		struct module *module)
 {
 	return 0;
 }
 
-void
-module_arch_cleanup(struct module *mod)
+void module_arch_cleanup(struct module *mod)
 {
 }

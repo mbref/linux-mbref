@@ -1,12 +1,11 @@
 /*
- * arch/microblaze/kernel/exceptions.c - HW exception handling
+ * HW exception handling
  *
  * Copyright (C) 2007 Xilinx, Inc.
  *
  * This file is subject to the terms and conditions of the GNU General
  * Public License. See the file COPYING in the main directory of this
  * archive for more details.
- *
  */
 
 #include <linux/kernel.h>
@@ -36,11 +35,10 @@ static void handle_unexpected_exception(unsigned int esr,
 static void handle_exception(const char *message, int signal,
 				unsigned int kernel_mode, unsigned int addr)
 {
-	if (kernel_mode) {
+	if (kernel_mode)
 		panic("%s in the kernel mode, PC=%08x\n", message, addr);
-	} else {
+	else
 		force_sig(signal, current);
-	}
 }
 
 asmlinkage void other_exception_handler(unsigned int esr, unsigned int addr)
