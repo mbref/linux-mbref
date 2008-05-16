@@ -1,6 +1,5 @@
 #ifndef _LINUX_OF_DEVICE_H
 #define _LINUX_OF_DEVICE_H
-#ifdef __KERNEL__
 
 #include <linux/device.h>
 #include <linux/of.h>
@@ -25,5 +24,13 @@ static inline void of_device_free(struct of_device *dev)
 	of_release_dev(&dev->dev);
 }
 
-#endif /* __KERNEL__ */
+extern struct of_device *of_device_alloc(struct device_node *np,
+					 const char *bus_id,
+					 struct device *parent);
+
+extern ssize_t of_device_get_modalias(struct of_device *ofdev,
+					char *str, ssize_t len);
+extern int of_device_uevent(struct device *dev,
+			    struct kobj_uevent_env *env);
+
 #endif /* _LINUX_OF_DEVICE_H */

@@ -6,7 +6,7 @@ extra-y := head.o vmlinux.lds
 
 obj-y += entry.o exceptions.o \
 	hw_exception_handler.o init_task.o intc.o irq.o of_device.o \
-	of_platform.o process.o prom.o prom_parse.o ptrace.o semaphore.o \
+	of_platform.o process.o prom.o ptrace.o semaphore.o \
 	setup.o signal.o sys_microblaze.o timer.o traps.o
 
 obj-y += cpu/

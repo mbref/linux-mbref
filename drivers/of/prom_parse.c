@@ -25,10 +25,10 @@ static int __of_address_to_resource(struct device_node *dev,
 #ifdef DEBUG
 static void of_dump_addr(const char *s, const u32 *addr, int na)
 {
-	printk(KERN_INFO "%s", s);
+	printk("%s", s);
 	while (na--)
 		printk(KERN_INFO " %08x", *(addr++));
-	printk(KERN_INFO "\n");
+	printk("\n");
 }
 #else
 static void of_dump_addr(const char *s, const u32 *addr, int na) { }
