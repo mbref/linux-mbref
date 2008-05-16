@@ -16,15 +16,15 @@ ENTRY(sys_call_table)
 	.long sys_time
 	.long sys_mknod
 	.long sys_chmod			/* 15 */
-	.long sys_lchown16
+	.long sys_lchown
 	.long sys_ni_syscall		/* old break syscall holder */
 	.long sys_ni_syscall		/* stat */
 	.long sys_lseek
 	.long sys_getpid		/* 20 */
 	.long sys_mount
 	.long sys_oldumount
-	.long sys_setuid16
-	.long sys_getuid16
+	.long sys_setuid
+	.long sys_getuid
 	.long sys_stime			/* 25 */
 	.long sys_ptrace
 	.long sys_alarm
@@ -46,11 +46,11 @@ ENTRY(sys_call_table)
 	.long sys_times
 	.long sys_ni_syscall		/* old prof syscall holder */
 	.long sys_brk			/* 45 */
-	.long sys_setgid16
-	.long sys_getgid16
+	.long sys_setgid
+	.long sys_getgid
 	.long sys_signal
-	.long sys_geteuid16
-	.long sys_getegid16		/* 50 */
+	.long sys_geteuid
+	.long sys_getegid		/* 50 */
 	.long sys_acct
 	.long sys_umount		/* recycled never used phys() */
 	.long sys_ni_syscall		/* old lock syscall holder */
@@ -70,8 +70,8 @@ ENTRY(sys_call_table)
 	.long sys_sigaction
 	.long sys_sgetmask
 	.long sys_ssetmask
-	.long sys_setreuid16		/* 70 */
-	.long sys_setregid16
+	.long sys_setreuid		/* 70 */
+	.long sys_setregid
 	.long sys_sigsuspend_wrapper
 	.long sys_sigpending
 	.long sys_sethostname
@@ -80,8 +80,8 @@ ENTRY(sys_call_table)
 	.long sys_getrusage
 	.long sys_gettimeofday
 	.long sys_settimeofday
-	.long sys_getgroups16		/* 80 */
-	.long sys_setgroups16
+	.long sys_getgroups		/* 80 */
+	.long sys_setgroups
 	.long sys_ni_syscall		/* old_select */
 	.long sys_symlink
 	.long sys_ni_syscall		/* lstat */
@@ -95,7 +95,7 @@ ENTRY(sys_call_table)
 	.long sys_truncate
 	.long sys_ftruncate
 	.long sys_fchmod
-	.long sys_fchown16		/* 95 */
+	.long sys_fchown		/* 95 */
 	.long sys_getpriority
 	.long sys_setpriority
 	.long sys_ni_syscall		/* old profil syscall holder */
@@ -138,8 +138,8 @@ ENTRY(sys_call_table)
 	.long sys_sysfs			/* 135 */
 	.long sys_personality
 	.long sys_ni_syscall		/* reserved for afs_syscall */
-	.long sys_setfsuid16
-	.long sys_setfsgid16
+	.long sys_setfsuid
+	.long sys_setfsgid
 	.long sys_llseek		/* 140 */
 	.long sys_getdents
 	.long sys_select
@@ -164,14 +164,14 @@ ENTRY(sys_call_table)
 	.long sys_sched_rr_get_interval
 	.long sys_nanosleep
 	.long sys_ni_syscall		/* sys_mremap */
-	.long sys_setresuid16
-	.long sys_getresuid16		/* 165 */
+	.long sys_setresuid
+	.long sys_getresuid		/* 165 */
 	.long sys_ni_syscall		/* sys_vm86 */
 	.long sys_ni_syscall		/* Old sys_query_module */
 	.long sys_poll
 	.long sys_nfsservctl
-	.long sys_setresgid16		/* 170 */
-	.long sys_getresgid16
+	.long sys_setresgid		/* 170 */
+	.long sys_getresgid
 	.long sys_prctl
 	.long sys_rt_sigreturn_wrapper
 	.long sys_rt_sigaction
@@ -182,7 +182,7 @@ ENTRY(sys_call_table)
 	.long sys_rt_sigsuspend_wrapper
 	.long sys_pread64		/* 180 */
 	.long sys_pwrite64
-	.long sys_chown16
+	.long sys_chown
 	.long sys_getcwd
 	.long sys_capget
 	.long sys_capset		/* 185 */

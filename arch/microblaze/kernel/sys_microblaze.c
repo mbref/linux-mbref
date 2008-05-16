@@ -1,17 +1,13 @@
 /*
- * arch/microblaze/kernel/sys_microblaze.c
+ * Copyright (C) 2007 PetaLogix
+ *	John Williams <john.williams@petalogix.com>
+ * Copyright (C) 2006 Atmark Techno, Inc.
+ *	Yasushi SHOJI <yashi@atmark-techno.com>
+ *	Tetsuya OHKAWA <tetsuya@atmark-techno.com>
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License. See the file "COPYING" in the main directory of this archive
  * for more details.
- *
- * Copyright (C) 2006 Atmark Techno, Inc.
- * Copyright (C) 2007 PetaLogix
- *
- * Authors:
- * John Williams <john.williams@petalogix.com>
- * Yasushi SHOJI <yashi@atmark-techno.com>
- * Tetsuya OHKAWA <tetsuya@atmark-techno.com>
  */
 
 #include <linux/errno.h>
@@ -278,37 +274,6 @@ int sys_uname(struct old_utsname *name)
 		err = 0;
 	up_read(&uts_sem);
 	return err;
-}
-
-int sys_olduname(struct oldold_utsname *name)
-{
-	int error;
-
-	if (!name)
-		return -EFAULT;
-	if (!access_ok(VERIFY_WRITE, name, sizeof(struct oldold_utsname)))
-		return -EFAULT;
-
-	down_read(&uts_sem);
-	error = __copy_to_user(&name->sysname, utsname()->sysname,
-				__OLD_UTS_LEN);
-	error -= __put_user(0, name->sysname + __OLD_UTS_LEN);
-	error -= __copy_to_user(&name->nodename, utsname()->nodename,
-				__OLD_UTS_LEN);
-	error -= __put_user(0, name->nodename + __OLD_UTS_LEN);
-	error -= __copy_to_user(&name->release, utsname()->release,
-				__OLD_UTS_LEN);
-	error -= __put_user(0, name->release + __OLD_UTS_LEN);
-	error -= __copy_to_user(&name->version, utsname()->version,
-				__OLD_UTS_LEN);
-	error -= __put_user(0, name->version + __OLD_UTS_LEN);
-	error -= __copy_to_user(&name->machine, utsname()->machine,
-				__OLD_UTS_LEN);
-	error = __put_user(0, name->machine + __OLD_UTS_LEN);
-	up_read(&uts_sem);
-
-	error = error ? -EFAULT : 0;
-	return error;
 }
 
 /*
