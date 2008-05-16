@@ -2,4 +2,4 @@
 # Makefile
 #
 
-lib-y := checksum.o memcpy.o memmove.o memset.o uaccess.o
+lib-y := memcpy.o memmove.o memset.o uaccess.o

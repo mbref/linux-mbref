@@ -70,6 +70,8 @@ lib-$(CONFIG_GENERIC_BUG) += bug.o
 
 obj-$(CONFIG_HAVE_LMB) += lmb.o
 
+obj-$(CONFIG_GENERIC_CSUM) += checksum.o
+
 hostprogs-y	:= gen_crc32table
 clean-files	:= crc32table.h
 
