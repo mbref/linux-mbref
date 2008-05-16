@@ -45,9 +45,6 @@
 #include <asm/sections.h>
 #include <asm/pci-bridge.h>
 
-extern char command_line[COMMAND_LINE_SIZE];
-u32 boot_cpuid;
-
 static int __initdata dt_root_addr_cells;
 static int __initdata dt_root_size_cells;
 
@@ -74,9 +71,9 @@ static inline char *find_flat_dt_string(u32 offset)
  * unflatten the tree
  */
 int __init of_scan_flat_dt(int (*it)(unsigned long node,
-				const char *uname, int depth,
-				void *data),
-			void *data)
+				     const char *uname, int depth,
+				     void *data),
+			   void *data)
 {
 	unsigned long p = ((unsigned long)initial_boot_params) +
 		initial_boot_params->off_dt_struct;
@@ -145,7 +142,7 @@ unsigned long __init of_get_flat_dt_root(void)
  * This function can be used within scan_flattened_dt callback to get
  * access to properties
  */
-void *__init of_get_flat_dt_prop(unsigned long node, const char *name,
+void* __init of_get_flat_dt_prop(unsigned long node, const char *name,
 				unsigned long *size)
 {
 	unsigned long p = node;
@@ -446,9 +443,11 @@ void __init unflatten_device_tree(void)
 	pr_debug(" <- unflatten_device_tree()\n");
 }
 
+#define early_init_dt_scan_drconf_memory(node) 0
+
 static int __init early_init_dt_scan_cpus(unsigned long node,
-					const char *uname, int depth,
-					void *data)
+					  const char *uname, int depth,
+					  void *data)
 {
 	static int logical_cpuid;
 	char *type = of_get_flat_dt_prop(node, "device_type", NULL);
@@ -462,13 +461,13 @@ static int __init early_init_dt_scan_cpus(unsigned long node,
 		return 0;
 
 	/* Get physical cpuid */
-	intserv = of_get_flat_dt_prop(node, "ibm,ppc-interrupt-server#s", &len);
+/*	intserv = of_get_flat_dt_prop(node, "ibm,ppc-interrupt-server#s", &len);
 	if (intserv) {
 		nthreads = len / sizeof(int);
-	} else {
+	} else {*/
 		intserv = of_get_flat_dt_prop(node, "reg", NULL);
 		nthreads = 1;
-	}
+/*	}*/
 
 	/*
 	 * Now see if any of these threads match our boot cpu.
@@ -574,14 +573,14 @@ static int __init early_init_dt_scan_chosen(unsigned long node,
 	/* Retreive command line */
 	p = of_get_flat_dt_prop(node, "bootargs", &l);
 	if (p != NULL && l > 0)
-		strlcpy(command_line, p, min((int)l, COMMAND_LINE_SIZE));
+		strlcpy(cmd_line, p, min((int)l, COMMAND_LINE_SIZE));
 
 #ifdef CONFIG_CMDLINE
 	if (p == NULL || l == 0 || (l == 1 && (*p) == 0))
-		strlcpy(command_line, CONFIG_CMDLINE, COMMAND_LINE_SIZE);
+		strlcpy(cmd_line, CONFIG_CMDLINE, COMMAND_LINE_SIZE);
 #endif /* CONFIG_CMDLINE */
 
-	pr_debug("Command line is: %s\n", command_line);
+	pr_debug("Command line is: %s\n", cmd_line);
 
 	/* break now */
 	return 1;
@@ -607,15 +606,13 @@ static int __init early_init_dt_scan_root(unsigned long node,
 	return 1;
 }
 
-static unsigned long __init dt_mem_next_cell(int s, cell_t **cellp)
+static u64 __init dt_mem_next_cell(int s, cell_t **cellp)
 {
 	cell_t *p = *cellp;
 
 	*cellp = p + s;
-	return of_read_ulong(p, s);
+	return of_read_number(p, s);
 }
-
-#define early_init_dt_scan_drconf_memory(node)	0
 
 static int __init early_init_dt_scan_memory(unsigned long node,
 				const char *uname, int depth, void *data)
@@ -625,10 +622,10 @@ static int __init early_init_dt_scan_memory(unsigned long node,
 	unsigned long l;
 
 	/* Look for the ibm,dynamic-reconfiguration-memory node */
-	if (depth == 1 &&
+/*	if (depth == 1 &&
 		strcmp(uname, "ibm,dynamic-reconfiguration-memory") == 0)
 		return early_init_dt_scan_drconf_memory(node);
-
+*/
 	/* We are scanning "memory" nodes only */
 	if (type == NULL) {
 		/*
@@ -652,18 +649,100 @@ static int __init early_init_dt_scan_memory(unsigned long node,
 		uname, l, reg[0], reg[1], reg[2], reg[3]);
 
 	while ((endp - reg) >= (dt_root_addr_cells + dt_root_size_cells)) {
-		unsigned long base, size;
+		u64 base, size;
 
 		base = dt_mem_next_cell(dt_root_addr_cells, &reg);
 		size = dt_mem_next_cell(dt_root_size_cells, &reg);
 
 		if (size == 0)
 			continue;
-		pr_debug(" - %lx ,  %lx\n", base, size);
+		pr_debug(" - %llx ,  %llx\n", (unsigned long long)base,
+			(unsigned long long)size);
+
 		lmb_add(base, size);
 	}
 	return 0;
 }
+
+#ifdef CONFIG_PHYP_DUMP
+/**
+ * phyp_dump_calculate_reserve_size() - reserve variable boot area 5% or arg
+ *
+ * Function to find the largest size we need to reserve
+ * during early boot process.
+ *
+ * It either looks for boot param and returns that OR
+ * returns larger of 256 or 5% rounded down to multiples of 256MB.
+ *
+ */
+static inline unsigned long phyp_dump_calculate_reserve_size(void)
+{
+	unsigned long tmp;
+
+	if (phyp_dump_info->reserve_bootvar)
+		return phyp_dump_info->reserve_bootvar;
+
+	/* divide by 20 to get 5% of value */
+	tmp = lmb_end_of_DRAM();
+	do_div(tmp, 20);
+
+	/* round it down in multiples of 256 */
+	tmp = tmp & ~0x0FFFFFFFUL;
+
+	return (tmp > PHYP_DUMP_RMR_END ? tmp : PHYP_DUMP_RMR_END);
+}
+
+/**
+ * phyp_dump_reserve_mem() - reserve all not-yet-dumped mmemory
+ *
+ * This routine may reserve memory regions in the kernel only
+ * if the system is supported and a dump was taken in last
+ * boot instance or if the hardware is supported and the
+ * scratch area needs to be setup. In other instances it returns
+ * without reserving anything. The memory in case of dump being
+ * active is freed when the dump is collected (by userland tools).
+ */
+static void __init phyp_dump_reserve_mem(void)
+{
+	unsigned long base, size;
+	unsigned long variable_reserve_size;
+
+	if (!phyp_dump_info->phyp_dump_configured) {
+		printk(KERN_ERR "Phyp-dump not supported on this hardware\n");
+		return;
+	}
+
+	if (!phyp_dump_info->phyp_dump_at_boot) {
+		printk(KERN_INFO "Phyp-dump disabled at boot time\n");
+		return;
+	}
+
+	variable_reserve_size = phyp_dump_calculate_reserve_size();
+
+	if (phyp_dump_info->phyp_dump_is_active) {
+		/* Reserve *everything* above RMR.Area freed by userland tools*/
+		base = variable_reserve_size;
+		size = lmb_end_of_DRAM() - base;
+
+		/* XXX crashed_ram_end is wrong, since it may be beyond
+		 * the memory_limit, it will need to be adjusted. */
+		lmb_reserve(base, size);
+
+		phyp_dump_info->init_reserve_start = base;
+		phyp_dump_info->init_reserve_size = size;
+	} else {
+		size = phyp_dump_info->cpu_state_size +
+			phyp_dump_info->hpte_region_size +
+			variable_reserve_size;
+		base = lmb_end_of_DRAM() - size;
+		lmb_reserve(base, size);
+		phyp_dump_info->init_reserve_start = base;
+		phyp_dump_info->init_reserve_size = size;
+	}
+}
+#else
+static inline void __init phyp_dump_reserve_mem(void) {}
+#endif /* CONFIG_PHYP_DUMP  && CONFIG_PPC_RTAS */
 
 void __init early_init_devtree(void *params)
 {
@@ -671,6 +750,11 @@ void __init early_init_devtree(void *params)
 
 	/* Setup flat device-tree pointer */
 	initial_boot_params = params;
+
+#ifdef CONFIG_PHYP_DUMP
+	/* scan tree to see if dump occured during last boot */
+	of_scan_flat_dt(early_init_dt_scan_phyp_dump, NULL);
+#endif
 
 	/* Retrieve various informations from the /chosen node of the
 	 * device-tree, including the platform type, initrd location and
@@ -684,12 +768,12 @@ void __init early_init_devtree(void *params)
 	of_scan_flat_dt(early_init_dt_scan_memory, NULL);
 
 	/* Save command line for /proc/cmdline and then parse parameters */
-	strlcpy(boot_command_line, command_line, COMMAND_LINE_SIZE);
+	strlcpy(boot_command_line, cmd_line, COMMAND_LINE_SIZE);
 	parse_early_param();
 
 	lmb_analyze();
 
-	pr_debug("Phys. mem: %lx\n", lmb_phys_mem_size());
+	pr_debug("Phys. mem: %lx\n",(unsigned long) lmb_phys_mem_size());
 
 	pr_debug("Scanning CPUs ...\n");
 
@@ -853,12 +937,14 @@ EXPORT_SYMBOL(of_node_put);
  */
 void of_attach_node(struct device_node *np)
 {
-	write_lock(&devtree_lock);
+	unsigned long flags;
+
+	write_lock_irqsave(&devtree_lock, flags);
 	np->sibling = np->parent->child;
 	np->allnext = allnodes;
 	np->parent->child = np;
 	allnodes = np;
-	write_unlock(&devtree_lock);
+	write_unlock_irqrestore(&devtree_lock, flags);
 }
 
 /*
@@ -869,8 +955,9 @@ void of_attach_node(struct device_node *np)
 void of_detach_node(struct device_node *np)
 {
 	struct device_node *parent;
+	unsigned long flags;
 
-	write_lock(&devtree_lock);
+	write_lock_irqsave(&devtree_lock, flags);
 
 	parent = np->parent;
 	if (!parent)
@@ -881,8 +968,8 @@ void of_detach_node(struct device_node *np)
 	else {
 		struct device_node *prev;
 		for (prev = allnodes;
-			prev->allnext != np;
-			prev = prev->allnext)
+		     prev->allnext != np;
+		     prev = prev->allnext)
 			;
 		prev->allnext = np->allnext;
 	}
@@ -892,8 +979,8 @@ void of_detach_node(struct device_node *np)
 	else {
 		struct device_node *prevsib;
 		for (prevsib = np->parent->child;
-			prevsib->sibling != np;
-			prevsib = prevsib->sibling)
+		     prevsib->sibling != np;
+		     prevsib = prevsib->sibling)
 			;
 		prevsib->sibling = np->sibling;
 	}
@@ -901,7 +988,7 @@ void of_detach_node(struct device_node *np)
 	of_node_set_flag(np, OF_DETACHED);
 
 out_unlock:
-	write_unlock(&devtree_lock);
+	write_unlock_irqrestore(&devtree_lock, flags);
 }
 
 /*
@@ -910,20 +997,21 @@ out_unlock:
 int prom_add_property(struct device_node *np, struct property *prop)
 {
 	struct property **next;
+	unsigned long flags;
 
 	prop->next = NULL;
-	write_lock(&devtree_lock);
+	write_lock_irqsave(&devtree_lock, flags);
 	next = &np->properties;
 	while (*next) {
 		if (strcmp(prop->name, (*next)->name) == 0) {
 			/* duplicate ! don't insert it */
-			write_unlock(&devtree_lock);
+			write_unlock_irqrestore(&devtree_lock, flags);
 			return -1;
 		}
 		next = &(*next)->next;
 	}
 	*next = prop;
-	write_unlock(&devtree_lock);
+	write_unlock_irqrestore(&devtree_lock, flags);
 
 #ifdef CONFIG_PROC_DEVICETREE
 	/* try to add to proc as well if it was initialized */
@@ -943,9 +1031,10 @@ int prom_add_property(struct device_node *np, struct property *prop)
 int prom_remove_property(struct device_node *np, struct property *prop)
 {
 	struct property **next;
+	unsigned long flags;
 	int found = 0;
 
-	write_lock(&devtree_lock);
+	write_lock_irqsave(&devtree_lock, flags);
 	next = &np->properties;
 	while (*next) {
 		if (*next == prop) {
@@ -958,7 +1047,7 @@ int prom_remove_property(struct device_node *np, struct property *prop)
 		}
 		next = &(*next)->next;
 	}
-	write_unlock(&devtree_lock);
+	write_unlock_irqrestore(&devtree_lock, flags);
 
 	if (!found)
 		return -ENODEV;
@@ -980,13 +1069,14 @@ int prom_remove_property(struct device_node *np, struct property *prop)
  * property list
  */
 int prom_update_property(struct device_node *np,
-			struct property *newprop,
-			struct property *oldprop)
+			 struct property *newprop,
+			 struct property *oldprop)
 {
 	struct property **next;
+	unsigned long flags;
 	int found = 0;
 
-	write_lock(&devtree_lock);
+	write_lock_irqsave(&devtree_lock, flags);
 	next = &np->properties;
 	while (*next) {
 		if (*next == oldprop) {
@@ -1000,7 +1090,7 @@ int prom_update_property(struct device_node *np,
 		}
 		next = &(*next)->next;
 	}
-	write_unlock(&devtree_lock);
+	write_unlock_irqrestore(&devtree_lock, flags);
 
 	if (!found)
 		return -ENODEV;
@@ -1064,15 +1154,12 @@ static struct debugfs_blob_wrapper flat_dt_blob;
 static int __init export_flat_device_tree(void)
 {
 	struct dentry *d;
-	d = debugfs_create_dir("microblaze", NULL);
-	if (!d)
-		return 1;
 
 	flat_dt_blob.data = initial_boot_params;
 	flat_dt_blob.size = initial_boot_params->totalsize;
 
 	d = debugfs_create_blob("flat-device-tree", S_IFREG | S_IRUSR,
-				d, &flat_dt_blob);
+				of_debugfs_root, &flat_dt_blob);
 	if (!d)
 		return 1;
 

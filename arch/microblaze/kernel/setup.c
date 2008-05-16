@@ -13,6 +13,7 @@
 #include <linux/cpu.h>
 #include <linux/initrd.h>
 #include <linux/console.h>
+#include <linux/debugfs.h>
 
 #include <asm/setup.h>
 #include <asm/sections.h>
@@ -36,7 +37,8 @@ DEFINE_PER_CPU(unsigned int, R11_SAVE);	/* Temp variable for entry */
 DEFINE_PER_CPU(unsigned int, CURRENT_SAVE);	/* Saved current pointer */
 
 int have_of = 1;
-char command_line[COMMAND_LINE_SIZE];
+unsigned int boot_cpuid;
+char cmd_line[COMMAND_LINE_SIZE];
 static char default_command_line[COMMAND_LINE_SIZE] __initdata = CONFIG_CMDLINE;
 
 void __init setup_arch(char **cmdline_p)
@@ -111,12 +113,12 @@ void __init machine_early_init(const char *cmdline, unsigned int ram,
 
 		/* Use memmove to handle likely case of memory overlap */
 		early_printk("Moving 0x%08x bytes from 0x%08x to 0x%08x\n",
-			size, romfs_base, &_ebss);
+			size, romfs_base, (unsigned)&_ebss);
 		memmove(&_ebss, (int *)romfs_base, size);
 
 		/* update klimit */
 		klimit += PAGE_ALIGN(size);
-		early_printk("New klimit: 0x%08x\n", klimit);
+		early_printk("New klimit: 0x%08x\n", (unsigned)klimit);
 	}
 #endif
 
@@ -130,10 +132,10 @@ void __init machine_early_init(const char *cmdline, unsigned int ram,
 	 if none provided, or forced */
 #ifndef CONFIG_CMDLINE_FORCE
 	if (cmdline && cmdline[0] != '\0')
-		strlcpy(command_line, cmdline, COMMAND_LINE_SIZE);
+		strlcpy(cmd_line, cmdline, COMMAND_LINE_SIZE);
 	else
 #endif
-		strlcpy(command_line, default_command_line, COMMAND_LINE_SIZE);
+		strlcpy(cmd_line, default_command_line, COMMAND_LINE_SIZE);
 
 	for (src = __ivt_start; src < __ivt_end; src++, dst++)
 		*dst = *src;
@@ -141,8 +143,19 @@ void __init machine_early_init(const char *cmdline, unsigned int ram,
 	/* Initialize global data */
 	per_cpu(KM, 0) = 0x1;	/* We start in kernel mode */
 	per_cpu(CURRENT_SAVE, 0) = (unsigned long)current;
-
 }
+
+#ifdef CONFIG_DEBUG_FS
+struct dentry *of_debugfs_root;
+
+static int microblaze_debugfs_init(void)
+{
+	of_debugfs_root = debugfs_create_dir("microblaze", NULL);
+
+	return of_debugfs_root == NULL;
+}
+arch_initcall(microblaze_debugfs_init);
+#endif
 
 void machine_restart(char *cmd)
 {
