@@ -95,9 +95,6 @@ void time_init(void)
 				NULL
 			};
 
-
-	jiffies = 0;
-
 	for (j = 0; timer_list[j] != NULL; j++) {
 		timer = of_find_compatible_node(NULL, NULL, timer_list[j]);
 		if (timer)

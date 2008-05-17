@@ -9,8 +9,6 @@
 #ifndef _ASM_MICROBLAZE_LMB_H
 #define _ASM_MICROBLAZE_LMB_H
 
-/*#define LMB_DBG(fmt...) pr_debug(fmt) */
-
 /* LMB limit is OFF */
 #define LMB_REAL_LIMIT	0xFFFFFFFF
 

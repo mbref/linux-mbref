@@ -52,9 +52,6 @@ config NO_DMA
 config GENERIC_CSUM
 	def_bool y
 
-#config UID16
-#	def_bool y
-
 config HZ
 	int
 	default 100

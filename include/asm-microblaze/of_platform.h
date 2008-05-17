@@ -29,12 +29,10 @@
 static const struct of_device_id of_default_bus_ids[] = {
 	{ .type = "soc", },
 	{ .compatible = "soc", },
-	{ .type = "spider", },
-	{ .type = "axon", },
 	{ .type = "plb5", },
 	{ .type = "plb4", },
 	{ .type = "opb", },
-	{ .type = "ebc", },
+	{ .type = "simple", },
 	{},
 };
 
