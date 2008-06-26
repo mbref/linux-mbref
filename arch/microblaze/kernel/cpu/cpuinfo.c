@@ -25,6 +25,7 @@ const struct cpu_ver_key cpu_ver_lookup[] = {
 	{"7.00.a", 0x05},
 	{"7.00.b", 0x07},
 	{"7.10.a", 0x08},
+	{"7.10.b", 0x09},
 	/* FIXME There is no keycode defined in MBV for these versions */
 	{"2.10.a", 0x10},
 	{"3.00.a", 0x20},
@@ -72,15 +73,13 @@ void __init setup_cpuinfo(void)
 		break;
 /* FIXME I found weird behavior with MB 7.00.a/b
  * please do not use FULL PVR with MMU */
-#if 0
 	case 1:
 		printk(KERN_INFO "%s: Using full CPU PVR support\n",
 			__func__);
 		set_cpuinfo_pvr_full(&cpuinfo, cpu);
 		break;
-#endif
 	default:
-		/*WARN_ON(1);*/
+		printk(KERN_WARNING "%s: Unsupported PVR setting\n", __func__);
 		set_cpuinfo_static(&cpuinfo, cpu);
 	}
 }
