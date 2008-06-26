@@ -453,7 +453,6 @@ static int __init early_init_dt_scan_cpus(unsigned long node,
 	char *type = of_get_flat_dt_prop(node, "device_type", NULL);
 	const u32 *intserv;
 	int i, nthreads;
-	unsigned long len;
 	int found = 0;
 
 	/* We are scanning "cpu" nodes only */
@@ -461,13 +460,8 @@ static int __init early_init_dt_scan_cpus(unsigned long node,
 		return 0;
 
 	/* Get physical cpuid */
-/*	intserv = of_get_flat_dt_prop(node, "ibm,ppc-interrupt-server#s", &len);
-	if (intserv) {
-		nthreads = len / sizeof(int);
-	} else {*/
-		intserv = of_get_flat_dt_prop(node, "reg", NULL);
-		nthreads = 1;
-/*	}*/
+	intserv = of_get_flat_dt_prop(node, "reg", NULL);
+	nthreads = 1;
 
 	/*
 	 * Now see if any of these threads match our boot cpu.

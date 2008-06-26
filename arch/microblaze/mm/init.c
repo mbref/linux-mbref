@@ -92,7 +92,7 @@ void __init setup_memory(void)
 	lmb_reserve(PFN_UP(end) << PAGE_SHIFT, map_size);
 
 	/* free bootmem is whole main memory */
-	free_bootmem(start_pfn << PAGE_SHIFT,
+	free_bootmem_node(NODE_DATA(0), start_pfn << PAGE_SHIFT,
 			((end_pfn - start_pfn) << PAGE_SHIFT) - 1);
 
 	/* reserve allocate blocks */

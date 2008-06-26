@@ -1,0 +1,17 @@
+#!/bin/bash
+
+test="[<2015d10c>]  [<2008048c>]  [<200533e0>]  [<2004cf2c>]  [<20057870>]  [<200526a8>]  [<20052774>]  [<200526a8>]  [<20053614>]  [<20005234>]  [<20000dc8>]  [<20000dc8>]  [<2000222c>]  "
+
+microblaze-uclinux-objdump -S vmlinux > vmlinux.dump
+
+for i in $test; do
+
+	echo "$i" | cut -b 3- | cut -b -8
+#	cat System.map | grep `echo "$i" | cut -b 3- | cut -b -8`
+	cat vmlinux.dump | grep `echo "$i" | cut -b 3- | cut -b -8`
+
+done
+
+
+
+

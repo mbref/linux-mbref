@@ -80,7 +80,7 @@ void __init setup_cpuinfo(void)
 		break;
 #endif
 	default:
-		WARN_ON(1);
+		/*WARN_ON(1);*/
 		set_cpuinfo_static(&cpuinfo, cpu);
 	}
 }
