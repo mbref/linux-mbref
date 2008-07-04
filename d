@@ -21,8 +21,8 @@ dtc -v 2>/dev/null 1>&2
 if [ $? == 0 ]
 then
 	echo nasel 
-	dtc -f -O dtb -b 0 -V 16 arch/microblaze/platform/$board/system.dts > $location/system.dtb
-	dtc -f -O dtb -b 0 -V 16 arch/microblaze/platform/$board/system.dts > $location2/system.dtb
+	dtc -f -O dtb -b 0 -V 16 arch/microblaze/platform/$board/system-full.dts > $location/system.dtb
+	dtc -f -O dtb -b 0 -V 16 arch/microblaze/platform/$board/system-full.dts > $location2/system.dtb
 fi
 
 
