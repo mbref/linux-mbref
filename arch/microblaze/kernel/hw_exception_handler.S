@@ -38,7 +38,6 @@
  * exceptions. JW
  */
 
-#include <linux/autoconf.h>
 #include <asm/exceptions.h>
 #include <asm/unistd.h>
 

@@ -8,7 +8,6 @@
  */
 #include <linux/init.h>
 #include <linux/irq.h>
-#include <linux/autoconf.h>
 #include <asm/page.h>
 #include <asm/io.h>
 

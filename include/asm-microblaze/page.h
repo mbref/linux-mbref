@@ -9,7 +9,6 @@
 #ifndef _ASM_MICROBLAZE_PAGE_H
 #define _ASM_MICROBLAZE_PAGE_H
 
-#include <linux/autoconf.h>
 #include <linux/pfn.h>
 
 /* PAGE_SHIFT determines the page size */

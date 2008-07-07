@@ -11,7 +11,6 @@
 
 #include <linux/init.h>
 #include <linux/slab.h>
-#include <linux/autoconf.h>
 #include <asm/cpuinfo.h>
 #include <asm/pvr.h>
 

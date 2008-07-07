@@ -11,8 +11,6 @@
 #ifndef _ASM_MICROBLAZE_EXCEPTIONS_H
 #define _ASM_MICROBLAZE_EXCEPTIONS_H
 
-#include <linux/autoconf.h>
-
 #ifndef __ASSEMBLY__
 
 void initialize_exception_handlers(void);

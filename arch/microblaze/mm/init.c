@@ -11,7 +11,6 @@
 
 #undef DEBUG
 
-#include <linux/autoconf.h>
 #include <linux/init.h>
 #include <linux/mm.h>
 #include "../../../mm/internal.h"

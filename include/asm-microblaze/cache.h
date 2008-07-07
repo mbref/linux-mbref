@@ -13,7 +13,6 @@
 #define _ASM_MICROBLAZE_CACHE_H
 
 #include <asm/registers.h>
-#include <linux/autoconf.h>
 
 #ifndef L1_CACHE_BYTES
 /* word-granular cache in microblaze */

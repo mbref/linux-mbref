@@ -10,7 +10,6 @@ OUTPUT_FORMAT("elf32-microblaze", "elf32-microblaze", "elf32-microblaze")
 OUTPUT_ARCH(microblaze)
 ENTRY(_start)
 
-#include <linux/autoconf.h>
 #include <asm-generic/vmlinux.lds.h>
 
 jiffies = jiffies_64 + 4;

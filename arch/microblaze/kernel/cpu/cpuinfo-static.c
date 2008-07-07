@@ -12,7 +12,6 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/string.h>
-#include <linux/autoconf.h>
 #include <asm/cpuinfo.h>
 
 const static char family_string[] = CONFIG_XILINX_MICROBLAZE0_FAMILY;

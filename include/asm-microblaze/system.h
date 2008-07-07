@@ -9,7 +9,6 @@
 #ifndef _ASM_MICROBLAZE_SYSTEM_H
 #define _ASM_MICROBLAZE_SYSTEM_H
 
-#include <linux/autoconf.h>
 #include <asm/registers.h>
 #include <asm/setup.h>
 

@@ -12,7 +12,6 @@
 
 #include <linux/init.h>
 #include <linux/string.h>
-#include <linux/autoconf.h>
 #include <asm/pvr.h>
 #include <asm/cpuinfo.h>
 

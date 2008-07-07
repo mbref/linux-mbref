@@ -13,7 +13,6 @@
  * Copyright 1992, Linus Torvalds.
  */
 
-#include <linux/autoconf.h>
 #include <asm/byteorder.h> /* swab32 */
 #include <asm/system.h> /* save_flags */
 
