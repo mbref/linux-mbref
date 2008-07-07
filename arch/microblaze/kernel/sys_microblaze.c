@@ -27,10 +27,10 @@
 #include <linux/module.h>
 #include <linux/err.h>
 #include <linux/fs.h>
+#include <linux/ipc.h>
+#include <linux/semaphore.h>
 
 #include <asm/uaccess.h>
-#include <linux/ipc.h>
-#include <asm/semaphore.h>
 #include <asm/unistd.h>
 
 /*
