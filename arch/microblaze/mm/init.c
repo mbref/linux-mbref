@@ -13,7 +13,7 @@
 
 #include <linux/init.h>
 #include <linux/mm.h>
-#include "../../../mm/internal.h"
+//#include "../../../mm/internal.h"
 #include <linux/swap.h>
 #include <linux/bootmem.h>
 #include <linux/pfn.h>
