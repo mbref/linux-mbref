@@ -52,57 +52,31 @@ config NO_DMA
 config GENERIC_CSUM
 	def_bool y
 
-config HZ
-	int
-	default 100
-
-config DEFCONFIG_LIST
-	string
-	default "arch/$ARCH/defconfig"
-
 source "init/Kconfig"
 
 source "arch/microblaze/platform/Kconfig.platform"
 
 menu "Processor type and features"
 
-config PREEMPT
-	bool "Preemptible Kernel"
-	help
-	  This option reduces the latency of the kernel when reacting to
-	  real-time or interactive events by allowing a low priority process to
-	  be preempted even if it is in kernel mode executing a system call.
-	  This allows applications to run more reliably even when the system is
-	  under load.
+source "kernel/Kconfig.preempt"
 
-	  Say Y here if you are building a kernel for a desktop, embedded
-	  or real-time system.  Say N if you are unsure.
+source "kernel/Kconfig.hz"
 
-config PREEMPT_TIMES
-	bool "Collect preemption latency times"
-	depends on PREEMPT
-	help
-	  Allow collection for preemption latency times.
-
-config LARGE_ALLOCS
-	bool "Allow allocating large blocks (> 1MB) of memory"
-	help
-	  Allow the slab memory allocator to keep chains for very large
-	  memory sizes - up to 32MB. You may need this if your system has
-	  a lot of RAM, and you need to able to allocate very large
-	  contiguous chunks. If unsure, say N.
-
-config GENERIC_CLOCKEVENTS
-	bool "Clockevents - enable"
-	default n
-	help
-	  clock events
+#config GENERIC_CLOCKEVENTS
+#	bool "Clockevents"
+#	default n
+#	help
+#	  clock events
 
 comment "Boot options"
 
+config CMDLINE_BOOL
+	bool "Default bootloader kernel arguments"
+
 config CMDLINE
 	string "Default kernel command string"
-	default ""
+	depends on CMDLINE_BOOL
+	default "console=ttyUL0,115200"
 	help
 	  On some architectures there is currently no way for the boot loader
 	  to pass arguments to the kernel. For these architectures, you should
@@ -111,6 +85,8 @@ config CMDLINE
 
 config CMDLINE_FORCE
 	bool "Force default kernel command string"
+	depends on CMDLINE_BOOL
+	default n
 	help
 	  Set this to have arguments from the default kernel command string
 	  override those passed by the boot loader.

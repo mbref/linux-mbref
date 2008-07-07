@@ -39,7 +39,12 @@ DEFINE_PER_CPU(unsigned int, CURRENT_SAVE);	/* Saved current pointer */
 int have_of = 1;
 unsigned int boot_cpuid;
 char cmd_line[COMMAND_LINE_SIZE];
+
+#ifdef CMDLINE_BOOL
 static char default_command_line[COMMAND_LINE_SIZE] __initdata = CONFIG_CMDLINE;
+#else
+static char default_command_line[COMMAND_LINE_SIZE];
+#endif
 
 void __init setup_memory(void);
 
