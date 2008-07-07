@@ -7,6 +7,7 @@
  * for more details.
  */
 
+#include <linux/init.h>
 #include <linux/stddef.h>
 #include <linux/sched.h>
 #include <linux/kernel_stat.h>

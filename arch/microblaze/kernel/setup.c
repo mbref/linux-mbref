@@ -41,6 +41,8 @@ unsigned int boot_cpuid;
 char cmd_line[COMMAND_LINE_SIZE];
 static char default_command_line[COMMAND_LINE_SIZE] __initdata = CONFIG_CMDLINE;
 
+void __init setup_memory(void);
+
 void __init setup_arch(char **cmdline_p)
 {
 	console_verbose();

@@ -5,9 +5,14 @@ header-y += ioctl.h
 header-y += mman.h
 header-y += poll.h
 header-y += signal.h
+header-y += socket.h
 header-y += statfs.h
+header-y += termbits.h
+header-y += termios.h
+header-y += ucontext.h
 
 unifdef-y += int-l64.h
 unifdef-y += int-ll64.h
 unifdef-y += resource.h
 unifdef-y += siginfo.h
+unifdef-y += param.h

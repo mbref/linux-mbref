@@ -10,15 +10,12 @@
 #ifndef _ASM_MICROBLAZE_SETUP_H
 #define _ASM_MICROBLAZE_SETUP_H
 
-#include <linux/init.h>
-
 extern unsigned int boot_cpuid;
 extern int have_of;
 
 #define COMMAND_LINE_SIZE	256
 extern char cmd_line[COMMAND_LINE_SIZE];
 
-int __init setup_early_printk(char *opt);
 void early_printk(const char *fmt, ...);
 
 #ifdef CONFIG_HEART_BEAT
@@ -28,10 +25,6 @@ void heartbeat(void);
 void system_timer_init(void);
 void time_init(void);
 unsigned long long sched_clock(void);
-
-void __init setup_memory(void);
-void __init machine_early_init(const char *cmdline, unsigned int ram,
-			unsigned int fdt);
 
 void machine_restart(char *cmd);
 void machine_shutdown(void);

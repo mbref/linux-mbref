@@ -11,11 +11,7 @@
 
 #include <linux/kernel.h>
 #include <linux/errno.h>
-#include <asm/segment.h>
-#include <asm/string.h>
-
 #include <linux/sched.h> /* RLIMIT_FSIZE */
-/* #include <linux/errno.h> */
 
 #define VERIFY_READ	0
 #define VERIFY_WRITE	1

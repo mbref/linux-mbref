@@ -1,7 +1,6 @@
 include include/asm-generic/Kbuild.asm
 
 header-y += auxvec.h
-header-y += cpuinfo.h
 header-y += errno.h
 header-y += fcntl.h
 header-y += ioctl.h
@@ -22,3 +21,7 @@ header-y += statfs.h
 header-y += stat.h
 header-y += termbits.h
 header-y += ucontext.h
+header-y += uaccess.h
+
+unifdef-y += signal.h
+unifdef-y += termios.h

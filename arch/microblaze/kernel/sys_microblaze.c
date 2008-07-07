@@ -36,7 +36,7 @@
 /*
  * sys_ipc() is the de-multiplexer for the SysV IPC calls..
  *
- * This is really horribly ugly.
+ * This is really horribly ugly. This will be remove with new toolchain.
  */
 int
 sys_ipc(uint call, int first, int second, int third, void *ptr, long fifth)
@@ -249,17 +249,6 @@ unsigned long sys_mmap(unsigned long addr, size_t len,
 
 	err = do_mmap2(addr, len, prot, flags, fd, offset >> PAGE_SHIFT);
 out:
-	return err;
-}
-
-int sys_uname(struct old_utsname *name)
-{
-	int err = -EFAULT;
-
-	down_read(&uts_sem);
-	if (name && !copy_to_user(name, utsname(), sizeof(*name)))
-		err = 0;
-	up_read(&uts_sem);
 	return err;
 }
 

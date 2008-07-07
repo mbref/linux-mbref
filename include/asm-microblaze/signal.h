@@ -13,7 +13,6 @@
 
 #ifndef __ASSEMBLY__
 #include <linux/types.h>
-#include <linux/linkage.h>
 
 /* Avoid too many header ordering problems. */
 struct siginfo;
@@ -177,19 +176,6 @@ typedef struct sigaltstack {
 #define ptrace_signal_deliver(regs, cookie) do { } while (0)
 
 #endif /* __KERNEL__ */
-
-asmlinkage int sys_sigsuspend(old_sigset_t mask, struct pt_regs *regs);
-asmlinkage int sys_rt_sigsuspend(sigset_t *unewset, size_t sigsetsize,
-					struct pt_regs *regs);
-asmlinkage int sys_sigaction(int sig, const struct old_sigaction *act,
-					struct old_sigaction *oact);
-asmlinkage int sys_sigaltstack(const stack_t __user *uss, stack_t __user *uoss,
-					struct pt_regs *regs);
-asmlinkage int sys_sigreturn(struct pt_regs *regs);
-asmlinkage int sys_rt_sigreturn(struct pt_regs *regs);
-
-
-
 #endif /* __ASSEMBLY__ */
 
 #endif /* _ASM_MICROBLAZE_SIGNAL_H */

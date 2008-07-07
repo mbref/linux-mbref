@@ -29,6 +29,7 @@
 #include <linux/stddef.h>
 #include <linux/personality.h>
 #include <linux/percpu.h>
+#include <linux/linkage.h>
 #include <asm/entry.h>
 #include <asm/ucontext.h>
 #include <asm/uaccess.h>

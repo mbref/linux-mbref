@@ -9,7 +9,6 @@
 #ifndef _ASM_MICROBLAZE_TERMIOS_H
 #define _ASM_MICROBLAZE_TERMIOS_H
 
-#include <linux/string.h>
 #include <asm/termbits.h>
 #include <asm/ioctls.h>
 

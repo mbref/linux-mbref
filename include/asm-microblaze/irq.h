@@ -24,7 +24,6 @@ static inline int irq_canonicalize(int irq)
 
 struct pt_regs;
 extern void do_IRQ(struct pt_regs *regs);
-extern void __init init_IRQ(void);
 irqreturn_t timer_interrupt(int irq, void *dev_id);
 
 /* irq_of_parse_and_map - Parse and Map an interrupt into linux virq space
