@@ -5,7 +5,7 @@
 	#size-cells = <1>;
 	compatible = "xlnx,microblaze";
 	model = "testing";
-	DDR_SDRAM_32Mx16: memory@20000000 {
+	memory: memory@20000000 {
 		device_type = "memory";
 		reg = < 0x20000000 0x2000000 >;
 	} ;
@@ -95,7 +95,7 @@
 		#size-cells = <1>;
 		compatible = "xlnx,plb-v46-1.00.a", "simple-bus";
 		ranges ;
-		Buttons_3Bit: gpio@40800000 {
+		gpio_0: gpio@40800000 {
 			compatible = "xlnx,xps-gpio-1.00.a";
 			interrupt-parent = <&xps_intc_0>;
 			interrupts = < 6 0x2 >;
@@ -113,7 +113,7 @@
 			xlnx,tri-default = <0xffffffff>;
 			xlnx,tri-default-2 = <0xffffffff>;
 		} ;
-		Character_LCD_2x16: gpio@40900000 {
+		gpio_1: gpio@40900000 {
 			compatible = "xlnx,xps-gpio-1.00.a";
 			reg = < 0x40900000 0x100000 >;
 			xlnx,all-inputs = <0x0>;
@@ -129,7 +129,7 @@
 			xlnx,tri-default = <0xffffffff>;
 			xlnx,tri-default-2 = <0xffffffff>;
 		} ;
-		DIP_Switches_4Bit: gpio@40700000 {
+		gpio_2: gpio@40700000 {
 			compatible = "xlnx,xps-gpio-1.00.a";
 			interrupt-parent = <&xps_intc_0>;
 			interrupts = < 7 0x2 >;
@@ -147,19 +147,7 @@
 			xlnx,tri-default = <0xffffffff>;
 			xlnx,tri-default-2 = <0xffffffff>;
 		} ;
-		Ethernet_MAC: ethernet@40c00000 {
-			compatible = "xlnx,xps-ethernetlite-1.00.a";
-			device_type = "network";
-			interrupt-parent = <&xps_intc_0>;
-			interrupts = < 2 0x0 >;
-			local-mac-address = [ 02 00 00 00 00 00 ];
-			reg = < 0x40c00000 0x100000 >;
-			xlnx,duplex = <0x1>;
-			xlnx,family = "spartan3e";
-			xlnx,rx-ping-pong = <0x0>;
-			xlnx,tx-ping-pong = <0x0>;
-		} ;
-		LEDs_8Bit: gpio@40600000 {
+		gpio_3: gpio@40600000 {
 			compatible = "xlnx,xps-gpio-1.00.a";
 			reg = < 0x40600000 0x100000 >;
 			xlnx,all-inputs = <0x0>;
@@ -175,7 +163,19 @@
 			xlnx,tri-default = <0xffffffff>;
 			xlnx,tri-default-2 = <0xffffffff>;
 		} ;
-		RS232_DCE: serial@40200000 {
+		emaclite: ethernet@40c00000 {
+			compatible = "xlnx,xps-ethernetlite-1.00.a";
+			device_type = "network";
+			interrupt-parent = <&xps_intc_0>;
+			interrupts = < 2 0x0 >;
+			local-mac-address = [ 02 00 00 00 00 00 ];
+			reg = < 0x40c00000 0x100000 >;
+			xlnx,duplex = <0x1>;
+			xlnx,family = "spartan3e";
+			xlnx,rx-ping-pong = <0x0>;
+			xlnx,tx-ping-pong = <0x0>;
+		} ;
+		uart16550: serial@40200000 {
 			clock-frequency = <50000000>;
 			compatible = "xlnx,xps-uart16550-1.00.a", "ns16550";
 			current-speed = <9600>;
@@ -190,7 +190,7 @@
 			xlnx,has-external-xin = <0x0>;
 			xlnx,is-a-16550 = <0x1>;
 		} ;
-		RS232_DTE: serial@40100000 {
+		uartlite: serial@40100000 {
 			clock-frequency = <50000000>;
 			compatible = "xlnx,xps-uartlite-1.00.a";
 			device_type = "serial";
@@ -204,7 +204,7 @@
 			xlnx,odd-parity = <0x0>;
 			xlnx,use-parity = <0x0>;
 		} ;
-		SPI_FLASH: xps-spi@40a00000 {
+		spi: xps-spi@40a00000 {
 			compatible = "xlnx,xps-spi-1.00.a";
 			interrupt-parent = <&xps_intc_0>;
 			interrupts = < 5 0x2 >;
@@ -215,7 +215,7 @@
 			xlnx,num-ss-bits = <0x4>;
 			xlnx,sck-ratio = <0x20>;
 		} ;
-		debug_module: debug@40300000 {
+		mdm: debug@40300000 {
 			compatible = "xlnx,mdm-1.00.a";
 			reg = < 0x40300000 0x100000 >;
 			xlnx,family = "spartan3e";
@@ -231,7 +231,7 @@
 			#size-cells = <1>;
 			compatible = "xlnx,mpmc-3.00.a";
 		} ;
-		xps_intc_0: interrupt-controller@40000000 {
+		intc_0: interrupt-controller@40000000 {
 			#interrupt-cells = <2>;
 			compatible = "xlnx,xps-intc-1.00.a";
 			interrupt-controller ;
@@ -239,7 +239,7 @@
 			xlnx,kind-of-edge = <0>;
 			xlnx,num-intr-inputs = <0x8>;
 		} ;
-		xps_timer_0: timer@40400000 {
+		timer_0: timer@40400000 {
 			compatible = "xlnx,xps-timer-1.00.a";
 			interrupt-parent = <&xps_intc_0>;
 			interrupts = < 0 0x2 >;
@@ -252,7 +252,7 @@
 			xlnx,trig0-assert = <0x1>;
 			xlnx,trig1-assert = <0x1>;
 		} ;
-		xps_timer_1: timer@40500000 {
+		timer_1: timer@40500000 {
 			compatible = "xlnx,xps-timer-1.00.a";
 			interrupt-parent = <&xps_intc_0>;
 			interrupts = < 1 0x2 >;

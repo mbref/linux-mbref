@@ -59,4 +59,4 @@ config XILINX_MICROBLAZE0_USE_FPU
 
 config XILINX_MICROBLAZE0_HW_VER
        string "Core version number" if ALLOW_EDIT_AUTO
-       default 7.00.a
+       default 7.00.b
