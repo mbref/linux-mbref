@@ -36,7 +36,7 @@ static void early_printk_putc(char c)
 	 * This will prevent lockups if the base address is incorrectly
 	 * set, or any other issue on the UARTLITE.
 	 * This limit is pretty arbitrary, unless we are at about 10 baud
-	 * we'll never timeout on a working UART. 
+	 * we'll never timeout on a working UART.
 	 */
 
 	unsigned retries = 10000;
