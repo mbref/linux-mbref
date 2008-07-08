@@ -18,7 +18,7 @@ ENTRY(sys_call_table)
 	.long sys_chmod			/* 15 */
 	.long sys_lchown
 	.long sys_ni_syscall		/* old break syscall holder */
-	.long sys_ni_syscall		/* stat */
+	.long sys_ni_syscall		/* old stat */
 	.long sys_lseek
 	.long sys_getpid		/* 20 */
 	.long sys_mount
@@ -28,14 +28,14 @@ ENTRY(sys_call_table)
 	.long sys_stime			/* 25 */
 	.long sys_ptrace
 	.long sys_alarm
-	.long sys_ni_syscall		/* fstat */
+	.long sys_ni_syscall		/* oldfstat */
 	.long sys_pause
 	.long sys_utime			/* 30 */
-	.long sys_ni_syscall		/* old stty syscall holder */
-	.long sys_ni_syscall		/* old gtty syscall holder */
+	.long sys_ni_syscall		/* stty syscall holder */
+	.long sys_ni_syscall		/* gtty syscall holder */
 	.long sys_access
 	.long sys_nice
-	.long sys_ni_syscall		/* 35 - old ftime syscall holder */
+	.long sys_ni_syscall		/* 35 - ftime syscall holder */
 	.long sys_sync
 	.long sys_kill
 	.long sys_rename
@@ -44,7 +44,7 @@ ENTRY(sys_call_table)
 	.long sys_dup
 	.long sys_pipe
 	.long sys_times
-	.long sys_ni_syscall		/* old prof syscall holder */
+	.long sys_ni_syscall		/* prof syscall holder */
 	.long sys_brk			/* 45 */
 	.long sys_setgid
 	.long sys_getgid
@@ -52,14 +52,14 @@ ENTRY(sys_call_table)
 	.long sys_geteuid
 	.long sys_getegid		/* 50 */
 	.long sys_acct
-	.long sys_umount		/* recycled never used phys() */
-	.long sys_ni_syscall		/* old lock syscall holder */
+	.long sys_umount		/* umount2 recycled never used phys() */
+	.long sys_ni_syscall		/* lock syscall holder */
 	.long sys_ioctl
 	.long sys_fcntl			/* 55 */
-	.long sys_ni_syscall		/* old mpx syscall holder */
+	.long sys_ni_syscall		/* mpx syscall holder */
 	.long sys_setpgid
-	.long sys_ni_syscall		/* old ulimit syscall holder */
-	.long sys_ni_syscall		/* olduname */
+	.long sys_ni_syscall		/* ulimit syscall holder */
+	.long sys_ni_syscall		/* oldolduname*/
 	.long sys_umask			/* 60 */
 	.long sys_chroot
 	.long sys_ustat
@@ -84,7 +84,7 @@ ENTRY(sys_call_table)
 	.long sys_setgroups
 	.long sys_ni_syscall		/* old_select */
 	.long sys_symlink
-	.long sys_ni_syscall		/* lstat */
+	.long sys_ni_syscall		/* oldlstat */
 	.long sys_readlink		/* 85 */
 	.long sys_uselib
 	.long sys_swapon
