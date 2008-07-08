@@ -9,8 +9,13 @@
 #include <linux/module.h>
 #include <linux/sched.h>
 #include <linux/pm.h>
+#include <linux/tick.h>
 
+#include <asm/bitops.h>
 #include <asm/system.h>
+#include <asm/pgalloc.h>
+
+static int hlt_counter = 1;
 
 /* FIXME */
 void show_regs(struct pt_regs *regs)
@@ -33,20 +38,71 @@ void show_regs(struct pt_regs *regs)
 	printk(KERN_INFO "\n");
 }
 
+void (*pm_idle)(void);
 void (*pm_power_off)(void) = NULL;
 EXPORT_SYMBOL(pm_power_off);
+
+void disable_hlt(void)
+{
+	hlt_counter++;
+}
+EXPORT_SYMBOL(disable_hlt);
+
+void enable_hlt(void)
+{
+	hlt_counter--;
+}
+EXPORT_SYMBOL(enable_hlt);
+
+static int __init nohlt_setup(char *__unused)
+{
+	hlt_counter = 1;
+	return 1;
+}
+__setup("nohlt", nohlt_setup);
+
+static int __init hlt_setup(char *__unused)
+{
+	hlt_counter = 0;
+	return 1;
+}
+__setup("hlt", hlt_setup);
+
+void default_idle(void)
+{
+	if (!hlt_counter) {
+		clear_thread_flag(TIF_POLLING_NRFLAG);
+		smp_mb__after_clear_bit();
+		local_irq_disable();
+		while (!need_resched())
+			cpu_sleep();
+		local_irq_enable();
+		set_thread_flag(TIF_POLLING_NRFLAG);
+	} else
+		while (!need_resched())
+			cpu_relax();
+}
 
 void cpu_idle(void)
 {
 	set_thread_flag(TIF_POLLING_NRFLAG);
 
+	/* endless idle loop with no priority at all */
 	while (1) {
+		void (*idle)(void) = pm_idle;
+
+		if (!idle)
+			idle = default_idle;
+
+		tick_nohz_stop_sched_tick();
 		while (!need_resched())
-			cpu_relax();
+			idle();
+		tick_nohz_restart_sched_tick();
 
 		preempt_enable_no_resched();
 		schedule();
 		preempt_disable();
+		check_pgt_cache();
 	}
 }
 

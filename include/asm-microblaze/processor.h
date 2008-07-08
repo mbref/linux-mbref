@@ -67,6 +67,7 @@ extern unsigned long get_wchan(struct task_struct *p);
 
 /* FIXME */
 #define cpu_relax()		do {} while (0)
+#define cpu_sleep()		do {} while (0)
 #define prepare_to_copy(tsk)	do {} while (0)
 
 /*
