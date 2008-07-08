@@ -14,9 +14,7 @@
 #include <linux/ptrace.h>
 #include <linux/hardirq.h>
 #include <linux/thread_info.h>
-
-#define DEFINE(sym, val) asm volatile("\n->" #sym " %0 " #val : : "i" (val))
-#define BLANK() asm volatile("\n->" : :)
+#include <linux/kbuild.h>
 
 int main(int argc, char *argv[])
 {
