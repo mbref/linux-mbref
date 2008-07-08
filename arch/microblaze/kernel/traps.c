@@ -10,6 +10,7 @@
 #include <linux/kallsyms.h>
 #include <linux/module.h>
 #include <linux/sched.h>
+#include <linux/debug_locks.h>
 
 #include <asm/exceptions.h>
 #include <asm/system.h>
@@ -28,7 +29,16 @@ void __bad_xchg(volatile void *ptr, int size)
 }
 EXPORT_SYMBOL(__bad_xchg);
 
-static int kstack_depth_to_print = 24;
+/* x86 has syscall for setting the value */
+int kstack_depth_to_print = 24;
+
+static int __init kstack_setup(char *s)
+{
+	kstack_depth_to_print = simple_strtoul(s, NULL, 0);
+
+	return 1;
+}
+__setup("kstack=", kstack_setup);
 
 void show_trace(struct task_struct *task, unsigned long *stack)
 {
@@ -37,18 +47,29 @@ void show_trace(struct task_struct *task, unsigned long *stack)
 	if (!stack)
 		stack = (unsigned long *)&stack;
 
-	printk(KERN_INFO "Call Trace: ");
+	printk(KERN_NOTICE "Call Trace: ");
 #ifdef CONFIG_KALLSYMS
-	printk(KERN_INFO "\n");
+	printk(KERN_NOTICE "\n");
 #endif
 	while (!kstack_end(stack)) {
 		addr = *stack++;
-		if (__kernel_text_address(addr)) {
-			printk(KERN_INFO "[<%08lx>] ", addr);
-			print_symbol("%s\n", addr);
-		}
+		/*
+		 * If the address is either in the text segment of the
+		 * kernel, or in the region which contains vmalloc'ed
+		 * memory, it *may* be the address of a calling
+		 * routine; if so, print it so that someone tracing
+		 * down the cause of the crash will be able to figure
+		 * out the call path that was taken.
+		 */
+		if (kernel_text_address(addr))
+			print_ip_sym(addr);
 	}
-	printk(KERN_INFO "\n");
+	printk(KERN_NOTICE "\n");
+
+	if (!task)
+		task = current;
+
+	debug_show_held_locks(task);
 }
 
 void show_stack(struct task_struct *task, unsigned long *sp)
