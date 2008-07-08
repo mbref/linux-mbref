@@ -40,10 +40,8 @@ int have_of = 1;
 unsigned int boot_cpuid;
 char cmd_line[COMMAND_LINE_SIZE];
 
-#ifdef CMDLINE_BOOL
+#ifdef CONFIG_CMDLINE_BOOL
 static char default_command_line[COMMAND_LINE_SIZE] __initdata = CONFIG_CMDLINE;
-#else
-static char default_command_line[COMMAND_LINE_SIZE];
 #endif
 
 void __init setup_memory(void);
@@ -137,12 +135,15 @@ void __init machine_early_init(const char *cmdline, unsigned int ram,
 
 	/* Copy command line passed from bootloader, or use default
 	 if none provided, or forced */
+#ifdef CONFIG_CMDLINE_BOOL
 #ifndef CONFIG_CMDLINE_FORCE
 	if (cmdline && cmdline[0] != '\0')
 		strlcpy(cmd_line, cmdline, COMMAND_LINE_SIZE);
 	else
 #endif
 		strlcpy(cmd_line, default_command_line, COMMAND_LINE_SIZE);
+#endif
+
 
 	for (src = __ivt_start; src < __ivt_end; src++, dst++)
 		*dst = *src;
