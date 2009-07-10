@@ -2966,6 +2966,8 @@ static int detect_phy(struct net_local *lp, char *dev_name)
 	return 0;		/* default to zero */
 }
 
+static struct net_device_ops xilinx_netdev_ops;
+
 /** Shared device initialization code */
 static int xtenet_setup(
 		struct device *dev,
@@ -3073,8 +3075,7 @@ static int xtenet_setup(
 			XLlDma_Initialize(&lp->Dma, virt_baddr);
 		}
 
-
-		ndev->hard_start_xmit = xenet_DmaSend;
+		xilinx_netdev_ops.ndo_start_xmit = xenet_DmaSend;
 
 		result = descriptor_init(ndev);
 		if (result) {
@@ -3123,7 +3124,7 @@ static int xtenet_setup(
 		printk("XLlTemac: Fifo base address: 0x%0x\n", virt_baddr);
 		XLlFifo_Initialize(&lp->Fifo, virt_baddr);
 
-		ndev->hard_start_xmit = xenet_FifoSend;
+		xilinx_netdev_ops.ndo_start_xmit = xenet_FifoSend;
 	}
 
 	/** Scan to find the PHY */
@@ -3131,10 +3132,8 @@ static int xtenet_setup(
 
 
 	/* initialize the netdev structure */
-	ndev->open = xenet_open;
-	ndev->stop = xenet_close;
-	ndev->change_mtu = xenet_change_mtu;
-	ndev->get_stats = xenet_get_stats;
+
+	ndev->netdev_ops = &xilinx_netdev_ops;
 	ndev->flags &= ~IFF_MULTICAST;
 
 	if (XLlTemac_IsDma(&lp->Emac)) {
@@ -3152,8 +3151,6 @@ static int xtenet_setup(
 		}
 	}
 
-	ndev->do_ioctl = xenet_ioctl;
-	ndev->tx_timeout = xenet_tx_timeout;
 	ndev->watchdog_timeo = TX_TIMEOUT;
 
 	/* init the stats */
@@ -3239,6 +3236,16 @@ static u32 get_u32(struct of_device *ofdev, const char *s) {
 		return FALSE;
 	}
 }
+
+static struct net_device_ops xilinx_netdev_ops = {
+	.ndo_open 	= xenet_open,
+	.ndo_stop	= xenet_close,
+	.ndo_start_xmit	= 0,
+	.ndo_do_ioctl	= xenet_ioctl,
+	.ndo_change_mtu	= xenet_change_mtu,
+	.ndo_tx_timeout	= xenet_tx_timeout,
+	.ndo_get_stats	= xenet_get_stats,
+};
 
 static struct of_device_id xtenet_fifo_of_match[] = {
 	{ .compatible = "xlnx,xps-ll-fifo-1.00.a", },
