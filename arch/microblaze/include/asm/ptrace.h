@@ -71,6 +71,7 @@ void show_regs(struct pt_regs *);
 #define PT_EAR		(34 * sizeof(microblaze_reg_t))
 #define PT_ESR		(35 * sizeof(microblaze_reg_t))
 #define PT_FSR		(36 * sizeof(microblaze_reg_t))
+#define PT_KERNEL_MODE	(37 * sizeof(microblaze_reg_t))
 
 #endif /* __KERNEL */
 
