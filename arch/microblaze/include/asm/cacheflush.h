@@ -42,6 +42,7 @@
 #define flush_dcache_mmap_unlock(mapping)	do { } while (0)
 
 #define flush_icache_range(start, len)	__invalidate_icache_range(start, len)
+#define invalidate_icache_range(start, len)	__invalidate_icache_range(start, len)
 #define flush_icache_page(vma, pg)		do { } while (0)
 
 #ifndef CONFIG_MMU
