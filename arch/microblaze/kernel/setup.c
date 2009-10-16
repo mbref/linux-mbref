@@ -52,11 +52,13 @@ void __init setup_arch(char **cmdline_p)
 	/* irq_early_init(); */
 	setup_cpuinfo();
 
-	__invalidate_icache_all();
-	__enable_icache();
+	cache_init();
 
-	__invalidate_dcache_all();
-	__enable_dcache();
+	invalidate_dcache();
+	enable_dcache();
+
+	invalidate_icache();
+	enable_icache();
 
 	panic_timeout = 120;
 

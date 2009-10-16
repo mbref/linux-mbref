@@ -13,78 +13,88 @@
 #include <asm/cacheflush.h>
 #include <linux/cache.h>
 #include <asm/cpuinfo.h>
+#include <asm/pvr.h>
 
-/* Exported functions */
-
-void _enable_icache(void)
+static inline void __invalidate_flush_icache(unsigned int addr)
 {
-	if (cpuinfo.use_icache) {
-#if CONFIG_XILINX_MICROBLAZE0_USE_MSR_INSTR
-		__asm__ __volatile__ ("					\
-				msrset	r0, %0;				\
-				nop; "					\
-				:					\
-				: "i" (MSR_ICE)				\
-				: "memory");
-#else
-		__asm__ __volatile__ ("					\
-				mfs	r12, rmsr;			\
-				nop;					\
-				ori	r12, r12, %0;			\
-				mts	rmsr, r12;			\
-				nop; "					\
-				:					\
-				: "i" (MSR_ICE)				\
-				: "memory", "r12");
-#endif
-	}
+	__asm__ __volatile__ ("wic	%0, r0;"	\
+					: : "r" (addr));
 }
 
-void _disable_icache(void)
+static inline void __flush_dcache(unsigned int addr)
 {
-	if (cpuinfo.use_icache) {
-#if CONFIG_XILINX_MICROBLAZE0_USE_MSR_INSTR
-		__asm__ __volatile__ ("					\
-				msrclr r0, %0;				\
-				nop; "					\
-				:					\
-				: "i" (MSR_ICE)				\
-				: "memory");
-#else
-		__asm__ __volatile__ ("					\
-				mfs	r12, rmsr;			\
-				nop;					\
-				andi	r12, r12, ~%0;			\
-				mts	rmsr, r12;			\
-				nop; "					\
-				:					\
-				: "i" (MSR_ICE)				\
-				: "memory", "r12");
-#endif
-	}
+	__asm__ __volatile__ ("wdc.flush	%0, r0;"	\
+					: : "r" (addr));
 }
 
-void _invalidate_icache(unsigned int addr)
+static inline void __invalidate_dcache(unsigned int addr, unsigned int step)
 {
-	if (cpuinfo.use_icache) {
-		__asm__ __volatile__ ("					\
-				wic	%0, r0"				\
-				:					\
-				: "r" (addr));
-	}
+	__asm__ __volatile__ ("wdc.clear	%0, %1;"	\
+					: : "r" (addr), "r" (step));
 }
 
-void _enable_dcache(void)
+static inline void __enable_icache_msr(void)
 {
-	if (cpuinfo.use_dcache) {
-#if CONFIG_XILINX_MICROBLAZE0_USE_MSR_INSTR
+	__asm__ __volatile__ ("	msrset	r0, %0;				\
+				nop; "					\
+			: : "i" (MSR_ICE) : "memory");
+}
+
+static inline void __disable_icache_msr(void)
+{
+	__asm__ __volatile__ ("	msrclr	r0, %0;				\
+				nop; "					\
+			: : "i" (MSR_ICE) : "memory");
+}
+
+static inline void __enable_dcache_msr(void)
+{
 		__asm__ __volatile__ ("					\
 				msrset	r0, %0;				\
 				nop; "					\
 				:					\
 				: "i" (MSR_DCE)				\
 				: "memory");
-#else
+}
+
+static inline void __disable_dcache_msr(void)
+{
+		__asm__ __volatile__ ("					\
+				msrclr	r0, %0;				\
+				nop; "					\
+				:					\
+				: "i" (MSR_DCE)			\
+				: "memory");
+}
+
+static inline void __enable_icache_nomsr(void)
+{
+	__asm__ __volatile__ ("					\
+			mfs	r12, rmsr;			\
+			nop;					\
+			ori	r12, r12, %0;			\
+			mts	rmsr, r12;			\
+			nop; "					\
+			:					\
+			: "i" (MSR_ICE)				\
+			: "memory", "r12");
+}
+
+static inline void __disable_icache_nomsr(void)
+{
+		__asm__ __volatile__ ("					\
+				mfs	r12, rmsr;			\
+				nop;					\
+				andi	r12, r12, ~%0;			\
+				mts	rmsr, r12;			\
+				nop; "					\
+				:					\
+				: "i" (MSR_ICE)				\
+				: "memory", "r12");
+}
+
+static inline void __enable_dcache_nomsr(void)
+{
 		__asm__ __volatile__ ("					\
 				mfs	r12, rmsr;			\
 				nop;					\
@@ -94,20 +104,10 @@ void _enable_dcache(void)
 				:					\
 				: "i" (MSR_DCE)			\
 				: "memory", "r12");
-#endif
-	}
 }
 
-void _disable_dcache(void)
+static inline void __disable_dcache_nomsr(void)
 {
-#if CONFIG_XILINX_MICROBLAZE0_USE_MSR_INSTR
-		__asm__ __volatile__ ("					\
-				msrclr	r0, %0;				\
-				nop; "					\
-				:					\
-				: "i" (MSR_DCE)			\
-				: "memory");
-#else
 		__asm__ __volatile__ ("					\
 				mfs	r12, rmsr;			\
 				nop;					\
@@ -117,139 +117,483 @@ void _disable_dcache(void)
 				:					\
 				: "i" (MSR_DCE)			\
 				: "memory", "r12");
+}
+
+
+static void __flush_icache_range_msr_irq(unsigned long start, unsigned long end)
+{
+	unsigned int i;
+	unsigned flags;
+	unsigned int align;
+
+	pr_debug("%s: start 0x%x, end 0x%x\n", __func__,
+				(unsigned int)start, (unsigned int) end);
+
+	/*
+	 * No need to cover entire cache range,
+	 * just cover cache footprint
+	 */
+	end = min(start + cpuinfo.icache_size, end);
+	align = ~(cpuinfo.icache_line_length - 1);
+	start &= align; /* Make sure we are aligned */
+	/* Push end up to the next cache line */
+	end = ((end & align) + cpuinfo.icache_line_length);
+
+	local_irq_save(flags);
+	__disable_icache_msr();
+
+	for (i = start; i < end; i += cpuinfo.icache_line_length)
+		__invalidate_flush_icache(i);
+
+	__enable_icache_msr();
+	local_irq_restore(flags);
+}
+
+static void __flush_icache_range_nomsr_irq(unsigned long start,
+				unsigned long end)
+{
+	unsigned int i;
+	unsigned flags;
+	unsigned int align;
+
+	pr_debug("%s: start 0x%x, end 0x%x\n", __func__,
+				(unsigned int)start, (unsigned int) end);
+
+	/*
+	 * No need to cover entire cache range,
+	 * just cover cache footprint
+	 */
+	end = min(start + cpuinfo.icache_size, end);
+	align = ~(cpuinfo.icache_line_length - 1);
+	start &= align; /* Make sure we are aligned */
+	/* Push end up to the next cache line */
+	end = ((end & align) + cpuinfo.icache_line_length);
+
+	local_irq_save(flags);
+	__disable_icache_nomsr();
+
+	for (i = start; i < end; i += cpuinfo.icache_line_length)
+		__invalidate_flush_icache(i);
+
+	__enable_icache_nomsr();
+	local_irq_restore(flags);
+}
+
+
+
+static void __flush_icache_all_msr_irq(void)
+{
+	int step;
+	unsigned int flags, len;
+
+	pr_debug("%s\n", __func__);
+
+	local_irq_save(flags);
+	__disable_icache_msr();
+
+	/* Just loop through cache size and invalidate, no need to add
+		CACHE_BASE address */
+/*	for (i = 0; i < cpuinfo.icache_size;
+		i += cpuinfo.icache_line_length)
+			__invalidate_flush_icache(i);
+*/
+	/* Just loop through cache size and invalidate it */
+	len = cpuinfo.icache_size;
+	step = -cpuinfo.icache_line_length;
+	__asm__ __volatile__ (" 1:	wic	%0, r0;			\
+					bgtid	%0, 1b;			\
+					addk	%0, %0, %1;		\
+					" : : "r" (len), "r" (step));
+
+	__enable_icache_msr();
+	local_irq_restore(flags);
+}
+
+
+static void __flush_icache_all_nomsr_irq(void)
+{
+	unsigned int i;
+	unsigned flags;
+
+	pr_debug("%s\n", __func__);
+
+	local_irq_save(flags);
+	__disable_icache_nomsr();
+
+	/* Just loop through cache size and invalidate it */
+	for (i = 0; i < cpuinfo.icache_size;
+		i += cpuinfo.icache_line_length)
+			__invalidate_flush_icache(i);
+
+	__enable_icache_nomsr();
+	local_irq_restore(flags);
+}
+
+
+
+static void __invalidate_dcache_all_msr_irq(void)
+{
+	int step;
+	unsigned int flags, len;
+
+	pr_debug("%s\n", __func__);
+
+	local_irq_save(flags);
+	__disable_dcache_msr();
+
+	/* Just loop through cache size and invalidate it */
+/*	for (i = 0; i < cpuinfo.dcache_size; i += cpuinfo.dcache_line_length)
+			__flush_dcache(i);
+*/
+	len = cpuinfo.dcache_size;
+	step = -cpuinfo.dcache_line_length;
+	__asm__ __volatile__ (" 1:	wdc.clear	%0, r0;		\
+					bgtid	%0, 1b;			\
+					addk	%0, %0, %1;		\
+					" : : "r" (len), "r" (step));
+
+	__enable_dcache_msr();
+	local_irq_restore(flags);
+}
+
+
+static void __invalidate_dcache_all_nomsr_irq(void)
+{
+	unsigned int i;
+	unsigned flags;
+
+	pr_debug("%s\n", __func__);
+
+	local_irq_save(flags);
+	__disable_dcache_nomsr();
+
+	/* Just loop through cache size and invalidate it */
+	for (i = 0; i < cpuinfo.dcache_size; i += cpuinfo.dcache_line_length)
+			__flush_dcache(i);
+
+	__enable_dcache_nomsr();
+	local_irq_restore(flags);
+}
+
+
+static void __invalidate_dcache_all_noirq(void)
+{
+	unsigned int i;
+
+	pr_debug("%s\n", __func__);
+
+	/* Just loop through cache size and invalidate it */
+	for (i = 0; i < cpuinfo.dcache_size; i += cpuinfo.dcache_line_length)
+			__invalidate_dcache(0, i);
+
+}
+
+
+static void __invalidate_dcache_range_noirq(unsigned long start,
+						unsigned long end)
+{
+	unsigned int i;
+	unsigned int align;
+
+	pr_debug("%s: start 0x%x, end 0x%x\n", __func__,
+				(unsigned int)start, (unsigned int) end);
+
+	/*
+	 * No need to cover entire cache range,
+	 * just cover cache footprint
+	 */
+	end = min(start + cpuinfo.dcache_size, end);
+	align = ~(cpuinfo.dcache_line_length - 1);
+	start &= align; /* Make sure we are aligned */
+	/* Push end up to the next cache line */
+	end = ((end & align) + cpuinfo.dcache_line_length);
+
+	for (i = start; i < end; i += cpuinfo.dcache_line_length)
+		__flush_dcache(i);
+}
+
+static void __invalidate_dcache_range_msr_irq(unsigned long start,
+							unsigned long end)
+{
+	unsigned int i;
+	unsigned flags;
+	unsigned int align;
+
+	pr_debug("%s: start 0x%x, end 0x%x\n", __func__,
+				(unsigned int)start, (unsigned int) end);
+
+	/*
+	 * No need to cover entire cache range,
+	 * just cover cache footprint
+	 */
+	end = min(start + cpuinfo.dcache_size, end);
+	align = ~(cpuinfo.dcache_line_length - 1);
+	start &= align; /* Make sure we are aligned */
+	/* Push end up to the next cache line */
+	end = ((end & align) + cpuinfo.dcache_line_length);
+	local_irq_save(flags);
+	__disable_dcache_msr();
+
+	for (i = start; i < end; i += cpuinfo.dcache_line_length)
+		__flush_dcache(i);
+
+	__enable_dcache_msr();
+	local_irq_restore(flags);
+}
+
+static void __invalidate_dcache_range_nomsr_irq(unsigned long start,
+							unsigned long end)
+{
+	unsigned int i;
+	unsigned flags;
+	unsigned int align;
+
+	pr_debug("%s: start 0x%x, end 0x%x\n", __func__,
+				(unsigned int)start, (unsigned int) end);
+	/*
+	 * No need to cover entire cache range,
+	 * just cover cache footprint
+	 */
+	end = min(start + cpuinfo.dcache_size, end);
+	align = ~(cpuinfo.dcache_line_length - 1);
+	start &= align; /* Make sure we are aligned */
+	/* Push end up to the next cache line */
+	end = ((end & align) + cpuinfo.dcache_line_length);
+	local_irq_save(flags);
+	__disable_dcache_nomsr();
+
+	for (i = start; i < end; i += cpuinfo.dcache_line_length)
+		__flush_dcache(i);
+
+	__enable_dcache_nomsr();
+	local_irq_restore(flags);
+}
+
+
+
+static void __flush_dcache_all_noirq(void)
+{
+	unsigned int i;
+
+	pr_debug("%s\n", __func__);
+	/*
+	 * Just loop through cache size and invalidate,
+	 * no need to add CACHE_BASE address
+	 */
+	for (i = 0; i < cpuinfo.dcache_size; i += cpuinfo.dcache_line_length)
+			__flush_dcache(i);
+
+}
+
+#if 0
+static void __flush_dcache_all_msr_irq(void)
+{
+	unsigned int i;
+	unsigned flags;
+
+	pr_debug("%s\n", __func__);
+
+	local_irq_save(flags);
+	__disable_icache_msr();
+
+	/*
+	 * Just loop through cache size and invalidate,
+	 * no need to add CACHE_BASE address
+	 */
+	for (i = 0; i < cpuinfo.dcache_size; i += cpuinfo.dcache_line_length)
+			__flush_dcache(i);
+
+	__enable_icache_msr();
+	local_irq_restore(flags);
+}
 #endif
-}
 
-void _invalidate_dcache(unsigned int addr)
-{
-		__asm__ __volatile__ ("					\
-				wdc	%0, r0"				\
-				:					\
-				: "r" (addr));
-}
-
-void __invalidate_icache_all(void)
+static void __flush_dcache_all_nomsr_irq(void)
 {
 	unsigned int i;
 	unsigned flags;
 
-	if (cpuinfo.use_icache) {
-		local_irq_save(flags);
-		__disable_icache();
+	pr_debug("%s\n", __func__);
 
-		/* Just loop through cache size and invalidate, no need to add
-			CACHE_BASE address */
-		for (i = 0; i < cpuinfo.icache_size;
-			i += cpuinfo.icache_line_length)
-				__invalidate_icache(i);
+	local_irq_save(flags);
+	__disable_icache_nomsr();
 
-		__enable_icache();
-		local_irq_restore(flags);
-	}
+	/*
+	 * Just loop through cache size and invalidate,
+	 * no need to add CACHE_BASE address
+	 */
+	for (i = 0; i < cpuinfo.dcache_size; i += cpuinfo.dcache_line_length)
+			__flush_dcache(i);
+
+	__enable_icache_nomsr();
+	local_irq_restore(flags);
 }
 
-void __invalidate_icache_range(unsigned long start, unsigned long end)
+
+
+static void __flush_dcache_range_noirq(unsigned long start, unsigned long end)
 {
 	unsigned int i;
-	unsigned flags;
 	unsigned int align;
 
-	if (cpuinfo.use_icache) {
-		/*
-		 * No need to cover entire cache range,
-		 * just cover cache footprint
-		 */
-		end = min(start + cpuinfo.icache_size, end);
-		align = ~(cpuinfo.icache_line_length - 1);
-		start &= align; /* Make sure we are aligned */
-		/* Push end up to the next cache line */
-		end = ((end & align) + cpuinfo.icache_line_length);
+	pr_debug("%s: start 0x%x, end 0x%x\n", __func__,
+				(unsigned int)start, (unsigned int) end);
 
-		local_irq_save(flags);
-		__disable_icache();
+	/*
+	 * No need to cover entire cache range,
+	 * just cover cache footprint
+	 */
+	end = min(start + cpuinfo.dcache_size, end);
+	align = ~(cpuinfo.dcache_line_length - 1);
+	start &= align; /* Make sure we are aligned */
+	/* Push end up to the next cache line */
+	end = ((end & align) + cpuinfo.dcache_line_length);
 
-		for (i = start; i < end; i += cpuinfo.icache_line_length)
-			__invalidate_icache(i);
+	for (i = start; i < end; i += cpuinfo.dcache_line_length)
+		__flush_dcache(i);
 
-		__enable_icache();
-		local_irq_restore(flags);
-	}
 }
 
-void __invalidate_icache_page(struct vm_area_struct *vma, struct page *page)
-{
-	__invalidate_icache_all();
-}
-
-void __invalidate_icache_user_range(struct vm_area_struct *vma,
-				struct page *page, unsigned long adr,
-				int len)
-{
-	__invalidate_icache_all();
-}
-
-void __invalidate_cache_sigtramp(unsigned long addr)
-{
-	__invalidate_icache_range(addr, addr + 8);
-}
-
-void __invalidate_dcache_all(void)
+#if 0
+static void __flush_dcache_range_msr_irq(unsigned long start, unsigned long end)
 {
 	unsigned int i;
-	unsigned flags;
-
-	if (cpuinfo.use_dcache) {
-		local_irq_save(flags);
-		__disable_dcache();
-
-		/*
-		 * Just loop through cache size and invalidate,
-		 * no need to add CACHE_BASE address
-		 */
-		for (i = 0; i < cpuinfo.dcache_size;
-			i += cpuinfo.dcache_line_length)
-				__invalidate_dcache(i);
-
-		__enable_dcache();
-		local_irq_restore(flags);
-	}
-}
-
-void __invalidate_dcache_range(unsigned long start, unsigned long end)
-{
-	unsigned int i;
-	unsigned flags;
 	unsigned int align;
+	unsigned flags;
 
-	if (cpuinfo.use_dcache) {
-		/*
-		 * No need to cover entire cache range,
-		 * just cover cache footprint
-		 */
-		end = min(start + cpuinfo.dcache_size, end);
-		align = ~(cpuinfo.dcache_line_length - 1);
-		start &= align; /* Make sure we are aligned */
-		/* Push end up to the next cache line */
-		end = ((end & align) + cpuinfo.dcache_line_length);
-		local_irq_save(flags);
-		__disable_dcache();
+	pr_debug("%s: start 0x%x, end 0x%x\n", __func__,
+				(unsigned int)start, (unsigned int) end);
 
-		for (i = start; i < end; i += cpuinfo.dcache_line_length)
-			__invalidate_dcache(i);
+	/*
+	 * No need to cover entire cache range,
+	 * just cover cache footprint
+	 */
+	end = min(start + cpuinfo.dcache_size, end);
+	align = ~(cpuinfo.dcache_line_length - 1);
+	start &= align; /* Make sure we are aligned */
+	/* Push end up to the next cache line */
+	end = ((end & align) + cpuinfo.dcache_line_length);
 
-		__enable_dcache();
-		local_irq_restore(flags);
+	local_irq_save(flags);
+	__disable_icache_msr();
+
+	for (i = start; i < end; i += cpuinfo.dcache_line_length)
+		__flush_dcache(i);
+
+	__enable_icache_msr();
+	local_irq_restore(flags);
+}
+#endif
+
+
+static void __flush_dcache_range_nomsr_irq(unsigned long start,
+						unsigned long end)
+{
+	unsigned int i;
+	unsigned int align;
+	unsigned flags;
+
+	pr_debug("%s: start 0x%x, end 0x%x\n", __func__,
+				(unsigned int)start, (unsigned int) end);
+
+	/*
+	 * No need to cover entire cache range,
+	 * just cover cache footprint
+	 */
+	end = min(start + cpuinfo.dcache_size, end);
+	align = ~(cpuinfo.dcache_line_length - 1);
+	start &= align; /* Make sure we are aligned */
+	/* Push end up to the next cache line */
+	end = ((end & align) + cpuinfo.dcache_line_length);
+
+	local_irq_save(flags);
+	__disable_icache_nomsr();
+
+	for (i = start; i < end; i += cpuinfo.dcache_line_length)
+		__flush_dcache(i);
+
+	__enable_icache_nomsr();
+	local_irq_restore(flags);
+}
+
+/* struct for wb caches and for wt caches */
+struct scache *mbc;
+
+const struct scache wb_msr = {
+	.ie = __enable_icache_msr,
+	.id = __disable_icache_msr,
+	.ifl = __flush_icache_all_msr_irq,
+	.iflr = __flush_icache_range_msr_irq,
+	.iin = __flush_icache_all_msr_irq,
+	.iinr = __flush_icache_range_msr_irq,
+	.de = __enable_dcache_msr,
+	.dd = __disable_dcache_msr,
+	.dfl = __flush_dcache_all_noirq,
+	.dflr = __flush_dcache_range_noirq,
+	.din = __invalidate_dcache_all_noirq,
+	.dinr = __invalidate_dcache_range_noirq,
+};
+
+const struct scache wb_nomsr = {
+	.ie = __enable_icache_nomsr,
+	.id = __disable_icache_nomsr,
+	.ifl = __flush_icache_all_nomsr_irq,
+	.iflr = __flush_icache_range_nomsr_irq,
+	.iin = __flush_icache_all_nomsr_irq,
+	.iinr = __flush_icache_range_nomsr_irq,
+	.de = __enable_dcache_nomsr,
+	.dd = __disable_dcache_nomsr,
+	.dfl = __flush_dcache_all_noirq,
+	.dflr = __flush_dcache_range_noirq,
+	.din = __invalidate_dcache_all_noirq,
+	.dinr = __invalidate_dcache_range_noirq,
+};
+
+const struct scache wt_msr = {
+	.ie = __enable_icache_msr,
+	.id = __disable_icache_msr,
+	.ifl = __flush_icache_all_msr_irq,
+	.iflr = __flush_icache_range_msr_irq,
+	.iin = __flush_icache_all_msr_irq,
+	.iinr = __flush_icache_range_msr_irq,
+	.de = __enable_dcache_msr,
+	.dd = __disable_dcache_msr,
+	.dfl = __invalidate_dcache_all_msr_irq,
+	.dflr = __invalidate_dcache_range_msr_irq,
+	.din = __invalidate_dcache_all_msr_irq,
+	.dinr = __invalidate_dcache_range_msr_irq,
+};
+
+const struct scache wt_nomsr = {
+	.ie = __enable_icache_nomsr,
+	.id = __disable_icache_nomsr,
+	.ifl = __flush_icache_all_nomsr_irq,
+	.iflr = __flush_icache_range_nomsr_irq,
+	.iin = __flush_icache_all_nomsr_irq,
+	.iinr = __flush_icache_range_nomsr_irq,
+	.de = __enable_dcache_nomsr,
+	.dd = __disable_dcache_nomsr,
+	.dfl = __flush_dcache_all_nomsr_irq,
+	.dflr = __flush_dcache_range_nomsr_irq,
+	.din = __invalidate_dcache_all_nomsr_irq,
+	.dinr = __invalidate_dcache_range_nomsr_irq,
+};
+
+
+void cache_init(void)
+{
+/* FIXME there is important to cover icache/dcache is OFF, etc */
+/* FIXME I will have to check all function and especially implementations */
+
+	if (cpuinfo.use_instr & PVR2_USE_MSR_INSTR) {
+		if (cpuinfo.dcache_wb)
+			mbc = (struct scache *)&wb_msr;
+		else
+			mbc = (struct scache *)&wt_msr;
+	} else {
+		if (cpuinfo.dcache_wb)
+			mbc = (struct scache *)&wb_nomsr;
+		else
+			mbc = (struct scache *)&wt_nomsr;
 	}
-}
-
-void __invalidate_dcache_page(struct vm_area_struct *vma, struct page *page)
-{
-	__invalidate_dcache_all();
-}
-
-void __invalidate_dcache_user_range(struct vm_area_struct *vma,
-				struct page *page, unsigned long adr,
-				int len)
-{
-	__invalidate_dcache_all();
 }
