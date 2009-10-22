@@ -295,8 +295,10 @@ static void setup_rt_frame(int sig, struct k_sigaction *ka, siginfo_t *info,
 	int err = 0;
 	int signal;
 	unsigned long address = 0;
+#ifdef CONFIG_MMU
 	pmd_t *pmdp;
 	pte_t *ptep;
+#endif
 
 	frame = get_sigframe(ka, regs, sizeof(*frame));
 
