@@ -88,10 +88,7 @@ void cache_init(void);
 #define flush_cache_page(vma, vmaddr, pfn)	do { } while (0)
 
 /* MS: kgdb code use this macro */
-#define flush_cache_range(vma, start, len)	{	\
-	flush_icache_range((unsigned) (start), (unsigned) (start) + (len)); \
-	flush_dcache_range((unsigned) (start), (unsigned) (start) + (len)); \
-}
+#define flush_cache_range(vma, start, end)	do { } while (0)
 
 #define copy_to_user_page(vma, page, vaddr, dst, src, len)		\
 do {									\
