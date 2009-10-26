@@ -362,7 +362,7 @@ static void setup_rt_frame(int sig, struct k_sigaction *ka, siginfo_t *info,
 		pte_unmap(ptep);
 		preempt_enable();
 #else
-		flush_icache_range(address, address + 8);
+		invalidate_icache_range(address, address + 8);
 		flush_dcache_range(address, address + 8);
 #endif
 	}
