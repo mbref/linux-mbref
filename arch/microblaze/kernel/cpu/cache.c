@@ -10,8 +10,6 @@
  * archive for more details.
  */
 
-#define DEBUG 1
-
 #include <asm/cacheflush.h>
 #include <linux/cache.h>
 #include <asm/cpuinfo.h>
