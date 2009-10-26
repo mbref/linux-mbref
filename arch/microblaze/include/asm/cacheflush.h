@@ -58,8 +58,8 @@ void cache_init(void);
 
 #define enable_icache()					mbc->ie();
 #define disable_icache()				mbc->id();
-#define flush_icache()					mbc->ifl();
-#define flush_icache_range(start, end)			mbc->iflr(start, end);
+#define flush_icache()					do { } while (0)
+#define flush_icache_range(start, end)			do { } while (0)
 #define invalidate_icache()				mbc->iin();
 #define invalidate_icache_range(start, end)		mbc->iinr(start, end);
 

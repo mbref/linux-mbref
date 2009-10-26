@@ -27,10 +27,10 @@ static inline void __flush_dcache(unsigned int addr)
 					: : "r" (addr));
 }
 
-static inline void __invalidate_dcache(unsigned int addr, unsigned int step)
+static inline void __invalidate_dcache(unsigned int addr)
 {
-	__asm__ __volatile__ ("wdc.clear	%0, %1;"	\
-					: : "r" (addr), "r" (step));
+	__asm__ __volatile__ ("wdc.clear	%0, r0;"	\
+					: : "r" (addr));
 }
 
 static inline void __enable_icache_msr(void)
@@ -119,7 +119,6 @@ static inline void __disable_dcache_nomsr(void)
 				: "memory", "r12");
 }
 
-
 static void __flush_icache_range_msr_irq(unsigned long start, unsigned long end)
 {
 	unsigned int i;
@@ -179,8 +178,6 @@ static void __flush_icache_range_nomsr_irq(unsigned long start,
 	local_irq_restore(flags);
 }
 
-
-
 static void __flush_icache_all_msr_irq(void)
 {
 	int step;
@@ -209,7 +206,6 @@ static void __flush_icache_all_msr_irq(void)
 	local_irq_restore(flags);
 }
 
-
 static void __flush_icache_all_nomsr_irq(void)
 {
 	unsigned int i;
@@ -228,8 +224,6 @@ static void __flush_icache_all_nomsr_irq(void)
 	__enable_icache_nomsr();
 	local_irq_restore(flags);
 }
-
-
 
 static void __invalidate_dcache_all_msr_irq(void)
 {
@@ -256,7 +250,6 @@ static void __invalidate_dcache_all_msr_irq(void)
 	local_irq_restore(flags);
 }
 
-
 static void __invalidate_dcache_all_nomsr_irq(void)
 {
 	unsigned int i;
@@ -269,12 +262,11 @@ static void __invalidate_dcache_all_nomsr_irq(void)
 
 	/* Just loop through cache size and invalidate it */
 	for (i = 0; i < cpuinfo.dcache_size; i += cpuinfo.dcache_line_length)
-			__flush_dcache(i);
+			__invalidate_dcache(i);
 
 	__enable_dcache_nomsr();
 	local_irq_restore(flags);
 }
-
 
 static void __invalidate_dcache_all_noirq(void)
 {
@@ -284,10 +276,8 @@ static void __invalidate_dcache_all_noirq(void)
 
 	/* Just loop through cache size and invalidate it */
 	for (i = 0; i < cpuinfo.dcache_size; i += cpuinfo.dcache_line_length)
-			__invalidate_dcache(0, i);
-
+			__invalidate_dcache(i);
 }
-
 
 static void __invalidate_dcache_range_noirq(unsigned long start,
 						unsigned long end)
@@ -309,7 +299,7 @@ static void __invalidate_dcache_range_noirq(unsigned long start,
 	end = ((end & align) + cpuinfo.dcache_line_length);
 
 	for (i = start; i < end; i += cpuinfo.dcache_line_length)
-		__flush_dcache(i);
+		__invalidate_dcache(i);
 }
 
 static void __invalidate_dcache_range_msr_irq(unsigned long start,
@@ -335,7 +325,7 @@ static void __invalidate_dcache_range_msr_irq(unsigned long start,
 	__disable_dcache_msr();
 
 	for (i = start; i < end; i += cpuinfo.dcache_line_length)
-		__flush_dcache(i);
+		__invalidate_dcache(i);
 
 	__enable_dcache_msr();
 	local_irq_restore(flags);
@@ -363,13 +353,11 @@ static void __invalidate_dcache_range_nomsr_irq(unsigned long start,
 	__disable_dcache_nomsr();
 
 	for (i = start; i < end; i += cpuinfo.dcache_line_length)
-		__flush_dcache(i);
+		__invalidate_dcache(i);
 
 	__enable_dcache_nomsr();
 	local_irq_restore(flags);
 }
-
-
 
 static void __flush_dcache_all_noirq(void)
 {
@@ -429,8 +417,6 @@ static void __flush_dcache_all_nomsr_irq(void)
 	local_irq_restore(flags);
 }
 
-
-
 static void __flush_dcache_range_noirq(unsigned long start, unsigned long end)
 {
 	unsigned int i;
@@ -484,7 +470,6 @@ static void __flush_dcache_range_msr_irq(unsigned long start, unsigned long end)
 	local_irq_restore(flags);
 }
 #endif
-
 
 static void __flush_dcache_range_nomsr_irq(unsigned long start,
 						unsigned long end)
@@ -578,7 +563,6 @@ const struct scache wt_nomsr = {
 	.din = __invalidate_dcache_all_nomsr_irq,
 	.dinr = __invalidate_dcache_range_nomsr_irq,
 };
-
 
 void cache_init(void)
 {
