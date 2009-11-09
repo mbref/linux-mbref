@@ -52,7 +52,7 @@ void __init setup_arch(char **cmdline_p)
 	/* irq_early_init(); */
 	setup_cpuinfo();
 
-	cache_init();
+	microblaze_cache_init();
 
 	invalidate_dcache();
 	enable_dcache();

@@ -564,7 +564,7 @@ const struct scache wt_nomsr = {
 	.dinr = __invalidate_dcache_range_nomsr_irq,
 };
 
-void cache_init(void)
+void microblaze_cache_init(void)
 {
 /* FIXME there is important to cover icache/dcache is OFF, etc */
 /* FIXME I will have to check all function and especially implementations */

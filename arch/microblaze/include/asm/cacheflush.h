@@ -54,7 +54,7 @@ struct scache {
 /* microblaze cache */
 extern struct scache *mbc;
 
-void cache_init(void);
+void microblaze_cache_init(void);
 
 #define enable_icache()					mbc->ie();
 #define disable_icache()				mbc->id();
