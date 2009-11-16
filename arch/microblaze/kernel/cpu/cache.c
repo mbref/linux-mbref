@@ -27,10 +27,10 @@ static inline void __flush_dcache(unsigned int addr)
 					: : "r" (addr));
 }
 
-static inline void __invalidate_dcache(unsigned int addr)
+static inline void __invalidate_dcache(unsigned int addr, unsigned int step)
 {
-	__asm__ __volatile__ ("wdc.clear	%0, r0;"	\
-					: : "r" (addr));
+	__asm__ __volatile__ ("wdc.clear	%0, %1;"	\
+					: : "r" (addr), "r" (step));
 }
 
 static inline void __enable_icache_msr(void)
@@ -136,13 +136,13 @@ static void __flush_icache_range_msr_irq(unsigned long start, unsigned long end)
 	align = ~(cpuinfo.icache_line_length - 1);
 	start &= align; /* Make sure we are aligned */
 	/* Push end up to the next cache line */
-	end = ((end & align) + cpuinfo.icache_line_length);
+	end = (end & align) + cpuinfo.icache_line_length;
 
 	local_irq_save(flags);
 	__disable_icache_msr();
 
 	for (i = start; i < end; i += cpuinfo.icache_line_length)
-		__invalidate_flush_icache(i);
+		__asm__ __volatile__ ("wic	%0, r0;" : : "r" (i));
 
 	__enable_icache_msr();
 	local_irq_restore(flags);
@@ -172,7 +172,7 @@ static void __flush_icache_range_nomsr_irq(unsigned long start,
 	__disable_icache_nomsr();
 
 	for (i = start; i < end; i += cpuinfo.icache_line_length)
-		__invalidate_flush_icache(i);
+		__asm__ __volatile__ ("wic	%0, r0;" : : "r" (i));
 
 	__enable_icache_nomsr();
 	local_irq_restore(flags);
@@ -188,12 +188,6 @@ static void __flush_icache_all_msr_irq(void)
 	local_irq_save(flags);
 	__disable_icache_msr();
 
-	/* Just loop through cache size and invalidate, no need to add
-		CACHE_BASE address */
-/*	for (i = 0; i < cpuinfo.icache_size;
-		i += cpuinfo.icache_line_length)
-			__invalidate_flush_icache(i);
-*/
 	/* Just loop through cache size and invalidate it */
 	len = cpuinfo.icache_size;
 	step = -cpuinfo.icache_line_length;
@@ -208,8 +202,8 @@ static void __flush_icache_all_msr_irq(void)
 
 static void __flush_icache_all_nomsr_irq(void)
 {
-	unsigned int i;
-	unsigned flags;
+	int step;
+	unsigned int flags, len;
 
 	pr_debug("%s\n", __func__);
 
@@ -217,9 +211,12 @@ static void __flush_icache_all_nomsr_irq(void)
 	__disable_icache_nomsr();
 
 	/* Just loop through cache size and invalidate it */
-	for (i = 0; i < cpuinfo.icache_size;
-		i += cpuinfo.icache_line_length)
-			__invalidate_flush_icache(i);
+	len = cpuinfo.icache_size;
+	step = -cpuinfo.icache_line_length;
+	__asm__ __volatile__ (" 1:	wic	%0, r0;			\
+					bgtid	%0, 1b;			\
+					addk	%0, %0, %1;		\
+					" : : "r" (len), "r" (step));
 
 	__enable_icache_nomsr();
 	local_irq_restore(flags);
@@ -235,12 +232,9 @@ static void __invalidate_dcache_all_msr_irq(void)
 	local_irq_save(flags);
 	__disable_dcache_msr();
 
-	/* Just loop through cache size and invalidate it */
-/*	for (i = 0; i < cpuinfo.dcache_size; i += cpuinfo.dcache_line_length)
-			__flush_dcache(i);
-*/
 	len = cpuinfo.dcache_size;
 	step = -cpuinfo.dcache_line_length;
+	/* FIXME should be just wdc */
 	__asm__ __volatile__ (" 1:	wdc.clear	%0, r0;		\
 					bgtid	%0, 1b;			\
 					addk	%0, %0, %1;		\
@@ -252,32 +246,45 @@ static void __invalidate_dcache_all_msr_irq(void)
 
 static void __invalidate_dcache_all_nomsr_irq(void)
 {
-	unsigned int i;
-	unsigned flags;
+	int step;
+	unsigned int flags, len;
 
 	pr_debug("%s\n", __func__);
 
 	local_irq_save(flags);
 	__disable_dcache_nomsr();
 
-	/* Just loop through cache size and invalidate it */
-	for (i = 0; i < cpuinfo.dcache_size; i += cpuinfo.dcache_line_length)
-			__invalidate_dcache(i);
+	len = cpuinfo.dcache_size;
+	step = -cpuinfo.dcache_line_length;
+	/* FIXME this is ok because it is used only for WT caches */
+	__asm__ __volatile__ (" 1:	wdc	%0, r0;		\
+					bgtid	%0, 1b;			\
+					addk	%0, %0, %1;		\
+					" : : "r" (len), "r" (step));
 
 	__enable_dcache_nomsr();
 	local_irq_restore(flags);
 }
 
+
 static void __invalidate_dcache_all_noirq(void)
 {
-	unsigned int i;
+	int step;
+	unsigned int len;
 
 	pr_debug("%s\n", __func__);
 
-	/* Just loop through cache size and invalidate it */
-	for (i = 0; i < cpuinfo.dcache_size; i += cpuinfo.dcache_line_length)
-			__invalidate_dcache(i);
+	len = cpuinfo.dcache_size;
+	step = -cpuinfo.dcache_line_length;
+
+	/* FIXME MS should be only wdc because I want to
+	 * invalidate whole dcache - with wdc instruction system freeze */
+	__asm__ __volatile__ (" 1:	wdc.clear	%0, r0;		\
+					bgtid	%0, 1b;			\
+					addk	%0, %0, %1;		\
+					" : : "r" (len), "r" (step));
 }
+
 
 static void __invalidate_dcache_range_noirq(unsigned long start,
 						unsigned long end)
@@ -298,8 +305,10 @@ static void __invalidate_dcache_range_noirq(unsigned long start,
 	/* Push end up to the next cache line */
 	end = ((end & align) + cpuinfo.dcache_line_length);
 
+	/* FIXME maybe should be rewrite in asm as is used with wdc.clear */
 	for (i = start; i < end; i += cpuinfo.dcache_line_length)
-		__invalidate_dcache(i);
+		__asm__ __volatile__ ("wdc.flush	%0, r0;"	\
+					: : "r" (i));
 }
 
 static void __invalidate_dcache_range_msr_irq(unsigned long start,
@@ -325,7 +334,9 @@ static void __invalidate_dcache_range_msr_irq(unsigned long start,
 	__disable_dcache_msr();
 
 	for (i = start; i < end; i += cpuinfo.dcache_line_length)
-		__invalidate_dcache(i);
+		__asm__ __volatile__ ("wdc.flush	%0, r0;"	\
+					: : "r" (i));
+
 
 	__enable_dcache_msr();
 	local_irq_restore(flags);
@@ -353,7 +364,8 @@ static void __invalidate_dcache_range_nomsr_irq(unsigned long start,
 	__disable_dcache_nomsr();
 
 	for (i = start; i < end; i += cpuinfo.dcache_line_length)
-		__invalidate_dcache(i);
+		__asm__ __volatile__ ("wdc.flush	%0, r0;"	\
+				: : "r" (i));
 
 	__enable_dcache_nomsr();
 	local_irq_restore(flags);
@@ -361,16 +373,18 @@ static void __invalidate_dcache_range_nomsr_irq(unsigned long start,
 
 static void __flush_dcache_all_noirq(void)
 {
-	unsigned int i;
+	int step;
+	unsigned int len;
 
 	pr_debug("%s\n", __func__);
-	/*
-	 * Just loop through cache size and invalidate,
-	 * no need to add CACHE_BASE address
-	 */
-	for (i = 0; i < cpuinfo.dcache_size; i += cpuinfo.dcache_line_length)
-			__flush_dcache(i);
 
+	len = cpuinfo.dcache_size;
+	step = -cpuinfo.dcache_line_length;
+
+	__asm__ __volatile__ (" 1:	wdc.flush	%0, r0;		\
+					bgtid	%0, 1b;			\
+					addk	%0, %0, %1;		\
+					" : : "r" (len), "r" (step));
 }
 
 #if 0
@@ -398,24 +412,27 @@ static void __flush_dcache_all_msr_irq(void)
 
 static void __flush_dcache_all_nomsr_irq(void)
 {
-	unsigned int i;
-	unsigned flags;
+	int step;
+	unsigned int len, flags;
 
 	pr_debug("%s\n", __func__);
 
 	local_irq_save(flags);
 	__disable_icache_nomsr();
 
-	/*
-	 * Just loop through cache size and invalidate,
-	 * no need to add CACHE_BASE address
-	 */
-	for (i = 0; i < cpuinfo.dcache_size; i += cpuinfo.dcache_line_length)
-			__flush_dcache(i);
+	len = cpuinfo.dcache_size;
+	step = -cpuinfo.dcache_line_length;
+
+	__asm__ __volatile__ (" 1:	wdc.flush	%0, r0;		\
+					bgtid	%0, 1b;			\
+					addk	%0, %0, %1;		\
+					" : : "r" (len), "r" (step));
 
 	__enable_icache_nomsr();
 	local_irq_restore(flags);
 }
+
+
 
 static void __flush_dcache_range_noirq(unsigned long start, unsigned long end)
 {
@@ -436,7 +453,8 @@ static void __flush_dcache_range_noirq(unsigned long start, unsigned long end)
 	end = ((end & align) + cpuinfo.dcache_line_length);
 
 	for (i = start; i < end; i += cpuinfo.dcache_line_length)
-		__flush_dcache(i);
+		__asm__ __volatile__ ("wdc.flush	%0, r0;"	\
+				: : "r" (i));
 
 }
 
@@ -471,6 +489,7 @@ static void __flush_dcache_range_msr_irq(unsigned long start, unsigned long end)
 }
 #endif
 
+
 static void __flush_dcache_range_nomsr_irq(unsigned long start,
 						unsigned long end)
 {
@@ -495,7 +514,8 @@ static void __flush_dcache_range_nomsr_irq(unsigned long start,
 	__disable_icache_nomsr();
 
 	for (i = start; i < end; i += cpuinfo.dcache_line_length)
-		__flush_dcache(i);
+		__asm__ __volatile__ ("wdc.flush	%0, r0;"	\
+				: : "r" (i));
 
 	__enable_icache_nomsr();
 	local_irq_restore(flags);
