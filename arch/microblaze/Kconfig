@@ -64,6 +64,9 @@ config GENERIC_GPIO
 config GENERIC_CSUM
 	def_bool y
 
+config HAVE_LATENCYTOP_SUPPORT
+	def_bool y
+
 config PCI
 	def_bool n
 
