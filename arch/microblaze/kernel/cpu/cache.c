@@ -27,10 +27,11 @@ static inline void __flush_dcache(unsigned int addr)
 					: : "r" (addr));
 }
 
-static inline void __invalidate_dcache(unsigned int addr, unsigned int step)
+static inline void __invalidate_dcache(unsigned int baseaddr,
+						unsigned int offset)
 {
 	__asm__ __volatile__ ("wdc.clear	%0, %1;"	\
-					: : "r" (addr), "r" (step));
+					: : "r" (baseaddr), "r" (offset));
 }
 
 static inline void __enable_icache_msr(void)
@@ -148,6 +149,29 @@ static void __flush_icache_range_msr_irq(unsigned long start, unsigned long end)
 	local_irq_restore(flags);
 }
 
+static void __flush_icache_range_msr_noirq(unsigned long start,
+							unsigned long end)
+{
+	unsigned int i;
+	unsigned int align;
+
+	pr_debug("%s: start 0x%x, end 0x%x\n", __func__,
+				(unsigned int)start, (unsigned int) end);
+
+	/*
+	 * No need to cover entire cache range,
+	 * just cover cache footprint
+	 */
+	end = min(start + cpuinfo.icache_size, end);
+	align = ~(cpuinfo.icache_line_length - 1);
+	start &= align; /* Make sure we are aligned */
+	/* Push end up to the next cache line */
+	end = (end & align) + cpuinfo.icache_line_length;
+
+	for (i = start; i < end; i += cpuinfo.icache_line_length)
+		__asm__ __volatile__ ("wic	%0, r0;" : : "r" (i));
+}
+
 static void __flush_icache_range_nomsr_irq(unsigned long start,
 				unsigned long end)
 {
@@ -178,6 +202,29 @@ static void __flush_icache_range_nomsr_irq(unsigned long start,
 	local_irq_restore(flags);
 }
 
+static void __flush_icache_range_nomsr_noirq(unsigned long start,
+				unsigned long end)
+{
+	unsigned int i;
+	unsigned int align;
+
+	pr_debug("%s: start 0x%x, end 0x%x\n", __func__,
+				(unsigned int)start, (unsigned int) end);
+
+	/*
+	 * No need to cover entire cache range,
+	 * just cover cache footprint
+	 */
+	end = min(start + cpuinfo.icache_size, end);
+	align = ~(cpuinfo.icache_line_length - 1);
+	start &= align; /* Make sure we are aligned */
+	/* Push end up to the next cache line */
+	end = ((end & align) + cpuinfo.icache_line_length);
+
+	for (i = start; i < end; i += cpuinfo.icache_line_length)
+		__asm__ __volatile__ ("wic	%0, r0;" : : "r" (i));
+}
+
 static void __flush_icache_all_msr_irq(void)
 {
 	int step;
@@ -200,6 +247,23 @@ static void __flush_icache_all_msr_irq(void)
 	__enable_icache_msr();
 	local_irq_restore(flags);
 }
+
+static void __flush_icache_all_msr_noirq(void)
+{
+	int step;
+	unsigned int len;
+
+	pr_debug("%s\n", __func__);
+
+	/* Just loop through cache size and invalidate it */
+	len = cpuinfo.icache_size;
+	step = -cpuinfo.icache_line_length;
+	__asm__ __volatile__ (" 1:	wic	%0, r0;			\
+					bgtid	%0, 1b;			\
+					addk	%0, %0, %1;		\
+					" : : "r" (len), "r" (step));
+}
+
 
 static void __flush_icache_all_nomsr_irq(void)
 {
@@ -224,6 +288,22 @@ static void __flush_icache_all_nomsr_irq(void)
 	local_irq_restore(flags);
 }
 
+static void __flush_icache_all_nomsr_noirq(void)
+{
+	int step;
+	unsigned int len;
+
+	pr_debug("%s\n", __func__);
+
+	/* Just loop through cache size and invalidate it */
+	len = cpuinfo.icache_size;
+	step = -cpuinfo.icache_line_length;
+	__asm__ __volatile__ (" 1:	wic	%0, r0;			\
+					bgtid	%0, 1b;			\
+					addk	%0, %0, %1;		\
+					" : : "r" (len), "r" (step));
+}
+
 static void __invalidate_dcache_all_msr_irq(void)
 {
 	int step;
@@ -237,8 +317,7 @@ static void __invalidate_dcache_all_msr_irq(void)
 
 	len = cpuinfo.dcache_size;
 	step = -cpuinfo.dcache_line_length;
-	/* FIXME should be just wdc */
-	__asm__ __volatile__ (" 1:	wdc.clear	%0, r0;		\
+	__asm__ __volatile__ (" 1:	wdc	%0, r0;		\
 					bgtid	%0, 1b;			\
 					addk	%0, %0, %1;		\
 					" : : "r" (len), "r" (step));
@@ -281,9 +360,7 @@ static void __invalidate_dcache_all_noirq(void)
 	len = cpuinfo.dcache_size;
 	step = -cpuinfo.dcache_line_length;
 
-	/* FIXME MS should be only wdc because I want to
-	 * invalidate whole dcache - with wdc instruction system freeze */
-	__asm__ __volatile__ (" 1:	wdc.clear	%0, r0;		\
+	__asm__ __volatile__ (" 1:	wdc	%0, r0;		\
 					bgtid	%0, 1b;			\
 					addk	%0, %0, %1;		\
 					" : : "r" (len), "r" (step));
@@ -311,7 +388,7 @@ static void __invalidate_dcache_range_noirq(unsigned long start,
 
 	/* FIXME maybe should be rewrite in asm as is used with wdc.clear */
 	for (i = start; i < end; i += cpuinfo.dcache_line_length)
-		__asm__ __volatile__ ("wdc.flush	%0, r0;"	\
+		__asm__ __volatile__ ("wdc.clear	%0, r0;"	\
 					: : "r" (i));
 }
 
@@ -338,7 +415,7 @@ static void __invalidate_dcache_range_msr_irq(unsigned long start,
 	__disable_dcache_msr();
 
 	for (i = start; i < end; i += cpuinfo.dcache_line_length)
-		__asm__ __volatile__ ("wdc.flush	%0, r0;"	\
+		__asm__ __volatile__ ("wdc.clear	%0, r0;"	\
 					: : "r" (i));
 
 
@@ -368,7 +445,7 @@ static void __invalidate_dcache_range_nomsr_irq(unsigned long start,
 	__disable_dcache_nomsr();
 
 	for (i = start; i < end; i += cpuinfo.dcache_line_length)
-		__asm__ __volatile__ ("wdc.flush	%0, r0;"	\
+		__asm__ __volatile__ ("wdc.clear	%0, r0;"	\
 				: : "r" (i));
 
 	__enable_dcache_nomsr();
@@ -395,7 +472,7 @@ static void __flush_dcache_all_noirq(void)
 static void __flush_dcache_all_msr_irq(void)
 {
 	unsigned int i;
-	unsigned flags;
+	unsigned long flags;
 
 	pr_debug("%s\n", __func__);
 
@@ -468,7 +545,7 @@ static void __flush_dcache_range_msr_irq(unsigned long start, unsigned long end)
 {
 	unsigned int i;
 	unsigned int align;
-	unsigned flags;
+	unsigned long flags;
 
 	pr_debug("%s: start 0x%x, end 0x%x\n", __func__,
 				(unsigned int)start, (unsigned int) end);
@@ -532,10 +609,10 @@ struct scache *mbc;
 const struct scache wb_msr = {
 	.ie = __enable_icache_msr,
 	.id = __disable_icache_msr,
-	.ifl = __flush_icache_all_msr_irq,
-	.iflr = __flush_icache_range_msr_irq,
-	.iin = __flush_icache_all_msr_irq,
-	.iinr = __flush_icache_range_msr_irq,
+	.ifl = __flush_icache_all_msr_noirq,
+	.iflr = __flush_icache_range_msr_noirq,
+	.iin = __flush_icache_all_msr_noirq,
+	.iinr = __flush_icache_range_msr_noirq,
 	.de = __enable_dcache_msr,
 	.dd = __disable_dcache_msr,
 	.dfl = __flush_dcache_all_noirq,
@@ -547,10 +624,10 @@ const struct scache wb_msr = {
 const struct scache wb_nomsr = {
 	.ie = __enable_icache_nomsr,
 	.id = __disable_icache_nomsr,
-	.ifl = __flush_icache_all_nomsr_irq,
-	.iflr = __flush_icache_range_nomsr_irq,
-	.iin = __flush_icache_all_nomsr_irq,
-	.iinr = __flush_icache_range_nomsr_irq,
+	.ifl = __flush_icache_all_nomsr_noirq,
+	.iflr = __flush_icache_range_nomsr_noirq,
+	.iin = __flush_icache_all_nomsr_noirq,
+	.iinr = __flush_icache_range_nomsr_noirq,
 	.de = __enable_dcache_nomsr,
 	.dd = __disable_dcache_nomsr,
 	.dfl = __flush_dcache_all_noirq,
