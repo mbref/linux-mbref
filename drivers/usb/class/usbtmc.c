@@ -367,13 +367,13 @@ static ssize_t usbtmc_read(struct file *filp, char __user *buf,
 {
 	struct usbtmc_device_data *data;
 	struct device *dev;
-	unsigned long int n_characters;
+	u32 n_characters;
 	u8 *buffer;
 	int actual;
-	int done;
-	int remaining;
+	size_t done;
+	size_t remaining;
 	int retval;
-	int this_part;
+	size_t this_part;
 
 	/* Get pointer to private data structure */
 	data = filp->private_data;
@@ -455,6 +455,18 @@ static ssize_t usbtmc_read(struct file *filp, char __user *buf,
 			       (buffer[6] << 16) +
 			       (buffer[7] << 24);
 
+		/* Ensure the instrument doesn't lie about it */
+		if(n_characters > actual - 12) {
+			dev_err(dev, "Device lies about message size: %zu > %zu\n", n_characters, actual - 12);
+			n_characters = actual - 12;
+		}
+
+		/* Ensure the instrument doesn't send more back than requested */
+		if(n_characters > this_part) {
+			dev_err(dev, "Device returns more than requested: %zu > %zu\n", done + n_characters, done + this_part);
+			n_characters = this_part;
+		}
+
 		/* Copy buffer to user space */
 		if (copy_to_user(buf + done, &buffer[12], n_characters)) {
 			/* There must have been an addressing problem */
@@ -465,6 +477,8 @@ static ssize_t usbtmc_read(struct file *filp, char __user *buf,
 		done += n_characters;
 		if (n_characters < USBTMC_SIZE_IOBUFFER)
 			remaining = 0;
+		else
+			remaining -= n_characters;
 	}
 
 	/* Update file position value */
@@ -751,7 +765,7 @@ static int get_capabilities(struct usbtmc_device_data *data)
 {
 	struct device *dev = &data->usb_dev->dev;
 	char *buffer;
-	int rv;
+	int rv = 0;
 
 	buffer = kmalloc(0x18, GFP_KERNEL);
 	if (!buffer)
@@ -763,7 +777,7 @@ static int get_capabilities(struct usbtmc_device_data *data)
 			     0, 0, buffer, 0x18, USBTMC_TIMEOUT);
 	if (rv < 0) {
 		dev_err(dev, "usb_control_msg returned %d\n", rv);
-		return rv;
+		goto err_out;
 	}
 
 	dev_dbg(dev, "GET_CAPABILITIES returned %x\n", buffer[0]);
@@ -773,7 +787,8 @@ static int get_capabilities(struct usbtmc_device_data *data)
 	dev_dbg(dev, "USB488 device capabilities are %x\n", buffer[15]);
 	if (buffer[0] != USBTMC_STATUS_SUCCESS) {
 		dev_err(dev, "GET_CAPABILITIES returned %x\n", buffer[0]);
-		return -EPERM;
+		rv = -EPERM;
+		goto err_out;
 	}
 
 	data->capabilities.interface_capabilities = buffer[4];
@@ -781,8 +796,9 @@ static int get_capabilities(struct usbtmc_device_data *data)
 	data->capabilities.usb488_interface_capabilities = buffer[14];
 	data->capabilities.usb488_device_capabilities = buffer[15];
 
+err_out:
 	kfree(buffer);
-	return 0;
+	return rv;
 }
 
 #define capability_attribute(name)					\
@@ -927,21 +943,27 @@ static long usbtmc_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	switch (cmd) {
 	case USBTMC_IOCTL_CLEAR_OUT_HALT:
 		retval = usbtmc_ioctl_clear_out_halt(data);
+		break;
 
 	case USBTMC_IOCTL_CLEAR_IN_HALT:
 		retval = usbtmc_ioctl_clear_in_halt(data);
+		break;
 
 	case USBTMC_IOCTL_INDICATOR_PULSE:
 		retval = usbtmc_ioctl_indicator_pulse(data);
+		break;
 
 	case USBTMC_IOCTL_CLEAR:
 		retval = usbtmc_ioctl_clear(data);
+		break;
 
 	case USBTMC_IOCTL_ABORT_BULK_OUT:
 		retval = usbtmc_ioctl_abort_bulk_out(data);
+		break;
 
 	case USBTMC_IOCTL_ABORT_BULK_IN:
 		retval = usbtmc_ioctl_abort_bulk_in(data);
+		break;
 	}
 
 	mutex_unlock(&data->io_mutex);

@@ -57,6 +57,9 @@ config STACKTRACE_SUPPORT
 config GENERIC_GPIO
 	def_bool y
 
+config GENERIC_CSUM
+	def_bool y
+
 config PCI
 	def_bool n
 

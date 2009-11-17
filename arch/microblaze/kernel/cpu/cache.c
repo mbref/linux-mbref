@@ -122,7 +122,7 @@ static inline void __disable_dcache_nomsr(void)
 static void __flush_icache_range_msr_irq(unsigned long start, unsigned long end)
 {
 	unsigned int i;
-	unsigned flags;
+	unsigned long flags;
 	unsigned int align;
 
 	pr_debug("%s: start 0x%x, end 0x%x\n", __func__,
@@ -152,7 +152,7 @@ static void __flush_icache_range_nomsr_irq(unsigned long start,
 				unsigned long end)
 {
 	unsigned int i;
-	unsigned flags;
+	unsigned long flags;
 	unsigned int align;
 
 	pr_debug("%s: start 0x%x, end 0x%x\n", __func__,
@@ -181,7 +181,8 @@ static void __flush_icache_range_nomsr_irq(unsigned long start,
 static void __flush_icache_all_msr_irq(void)
 {
 	int step;
-	unsigned int flags, len;
+	unsigned int len;
+	unsigned long flags;
 
 	pr_debug("%s\n", __func__);
 
@@ -203,7 +204,8 @@ static void __flush_icache_all_msr_irq(void)
 static void __flush_icache_all_nomsr_irq(void)
 {
 	int step;
-	unsigned int flags, len;
+	unsigned int len;
+	unsigned long flags;
 
 	pr_debug("%s\n", __func__);
 
@@ -225,7 +227,8 @@ static void __flush_icache_all_nomsr_irq(void)
 static void __invalidate_dcache_all_msr_irq(void)
 {
 	int step;
-	unsigned int flags, len;
+	unsigned int len;
+	unsigned long flags;
 
 	pr_debug("%s\n", __func__);
 
@@ -247,7 +250,8 @@ static void __invalidate_dcache_all_msr_irq(void)
 static void __invalidate_dcache_all_nomsr_irq(void)
 {
 	int step;
-	unsigned int flags, len;
+	unsigned int len;
+	unsigned long flags;
 
 	pr_debug("%s\n", __func__);
 
@@ -315,7 +319,7 @@ static void __invalidate_dcache_range_msr_irq(unsigned long start,
 							unsigned long end)
 {
 	unsigned int i;
-	unsigned flags;
+	unsigned long flags;
 	unsigned int align;
 
 	pr_debug("%s: start 0x%x, end 0x%x\n", __func__,
@@ -346,7 +350,7 @@ static void __invalidate_dcache_range_nomsr_irq(unsigned long start,
 							unsigned long end)
 {
 	unsigned int i;
-	unsigned flags;
+	unsigned long flags;
 	unsigned int align;
 
 	pr_debug("%s: start 0x%x, end 0x%x\n", __func__,
@@ -413,7 +417,8 @@ static void __flush_dcache_all_msr_irq(void)
 static void __flush_dcache_all_nomsr_irq(void)
 {
 	int step;
-	unsigned int len, flags;
+	unsigned int len;
+	unsigned long flags;
 
 	pr_debug("%s\n", __func__);
 
@@ -495,7 +500,7 @@ static void __flush_dcache_range_nomsr_irq(unsigned long start,
 {
 	unsigned int i;
 	unsigned int align;
-	unsigned flags;
+	unsigned long flags;
 
 	pr_debug("%s: start 0x%x, end 0x%x\n", __func__,
 				(unsigned int)start, (unsigned int) end);

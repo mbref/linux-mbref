@@ -64,6 +64,7 @@ endif
 ifeq ($(CONFIG_MMU),)
 MMU := -nommu
 endif
+
 export MMU DTB
 
 all: linux.bin
