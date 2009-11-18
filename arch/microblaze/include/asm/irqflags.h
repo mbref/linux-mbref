@@ -50,7 +50,7 @@
 				nop;				\
 				andi	%1, %0, %2;		\
 				mts	rmsr, %1;		\
-				nop;				\
+				nop;"				\
 				: "=r"(flags), "=r" (tmp)	\
 				: "i"(~MSR_IE)			\
 				: "memory");			\
