@@ -31,6 +31,8 @@
 #include <linux/errno.h>
 #include <asm/signal.h>
 
+#undef DEBUG
+
 /* The size of a state save frame. */
 #define STATE_SAVE_SIZE		(PT_SIZE + STATE_SAVE_ARG_SPACE)
 
