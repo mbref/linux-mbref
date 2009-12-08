@@ -62,8 +62,6 @@ void __init setup_arch(char **cmdline_p)
 	invalidate_icache();
 	enable_icache();
 
-	panic_timeout = 120;
-
 	setup_memory();
 
 	xilinx_pci_init();
