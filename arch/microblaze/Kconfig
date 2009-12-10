@@ -67,6 +67,9 @@ config GENERIC_CSUM
 config HAVE_LATENCYTOP_SUPPORT
 	def_bool y
 
+config LOCKDEP_SUPPORT
+	def_bool y
+
 config PCI
 	def_bool n
 
