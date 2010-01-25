@@ -60,23 +60,20 @@ config GENERIC_CLOCKEVENTS
 config GENERIC_HARDIRQS_NO__DO_IRQ
 	def_bool y
 
-config STACKTRACE_SUPPORT
-	def_bool y
-
 config GENERIC_GPIO
 	def_bool y
 
 config GENERIC_CSUM
 	def_bool y
 
-config HAVE_LATENCYTOP_SUPPORT
+config STACKTRACE_SUPPORT
 	def_bool y
 
 config LOCKDEP_SUPPORT
 	def_bool y
 
-config PCI
-	def_bool n
+config HAVE_LATENCYTOP_SUPPORT
+	def_bool y
 
 config DTC
        def_bool y
