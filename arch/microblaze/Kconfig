@@ -216,6 +216,10 @@ config TASK_SIZE
 	depends on MMU
 	default "0x80000000"
 
+config KERNEL_PAD
+	hex "Kernel PAD for unpacking" if ADVANCED_OPTIONS
+	default "0x80000" if MMU
+
 config CONSISTENT_START_BOOL
 	bool "Set custom consistent memory pool address"
 	depends on ADVANCED_OPTIONS && NOT_COHERENT_CACHE
