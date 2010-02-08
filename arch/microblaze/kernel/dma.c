@@ -21,17 +21,15 @@
  * default the offset is PCI_DRAM_OFFSET.
  */
 
-static inline void __dma_sync_page(void *vaddr, unsigned long offset,
+static inline void __dma_sync_page(unsigned long paddr, unsigned long offset,
 				size_t size, enum dma_data_direction direction)
 {
-	unsigned long start = virt_to_phys(vaddr);
-
 	switch (direction) {
 	case DMA_TO_DEVICE:
-		flush_dcache_range(start + offset, start + offset + size);
+		flush_dcache_range(paddr + offset, paddr + offset + size);
 		break;
 	case DMA_FROM_DEVICE:
-		invalidate_dcache_range(start + offset, start + offset + size);
+		invalidate_dcache_range(paddr + offset, paddr + offset + size);
 		break;
 	default:
 		BUG();
@@ -79,10 +77,12 @@ static int dma_direct_map_sg(struct device *dev, struct scatterlist *sgl,
 	struct scatterlist *sg;
 	int i;
 
+	/* FIXME this part of code is untested */
 	for_each_sg(sgl, sg, nents, i) {
 		sg->dma_address = sg_phys(sg) + get_dma_direct_offset(dev);
 		sg->dma_length = sg->length;
-		__dma_sync_page(sg_page(sg), sg->offset, sg->length, direction);
+		__dma_sync_page(page_to_phys(sg_page(sg)), sg->offset,
+							sg->length, direction);
 	}
 
 	return nents;
@@ -107,7 +107,7 @@ static inline dma_addr_t dma_direct_map_page(struct device *dev,
 					     struct dma_attrs *attrs)
 {
 	BUG_ON(direction == DMA_NONE);
-	__dma_sync_page(page, offset, size, direction);
+	__dma_sync_page(page_to_phys(page), offset, size, direction);
 	return page_to_phys(page) + offset + get_dma_direct_offset(dev);
 }
 
@@ -117,8 +117,12 @@ static inline void dma_direct_unmap_page(struct device *dev,
 					 enum dma_data_direction direction,
 					 struct dma_attrs *attrs)
 {
-/* There is not necessary to do cache cleanup */
-	/* __dma_sync_page(dma_address, 0 , size, direction); */
+/* There is not necessary to do cache cleanup
+ *
+ * phys_to_virt is here because in __dma_sync_page is __virt_to_phys and
+ * dma_address is physical address
+ */
+//	__dma_sync_page((void *)dma_address, 0 , size, direction);
 }
 
 struct dma_map_ops dma_direct_ops = {
