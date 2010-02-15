@@ -138,11 +138,9 @@ no_page:
 	 * we need to ensure that there are no cachelines in use,
 	 * or worse dirty in this area.
 	 */
-	/* invalidate_dcache_range(page, page + size); */
-	flush_dcache_range(page, page + size);
+	flush_dcache_range(virt_to_phys(page), virt_to_phys(page) + size);
 
-	/* Allocate some common virtual space to map the new pages.
-	*/
+	/* Allocate some common virtual space to map the new pages. */
 	area = get_vm_area(size, VM_ALLOC);
 	if (area == NULL) {
 		free_pages(page, order);
