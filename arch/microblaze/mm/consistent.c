@@ -146,7 +146,7 @@ no_page:
 		free_pages(page, order);
 		return NULL;
 	}
-	va = VMALLOC_VMADDR(area->addr);
+	va = (unsigned long) area->addr;
 	ret = (void *)va;
 
 	/* This gives us the real physical address of the first page. */
