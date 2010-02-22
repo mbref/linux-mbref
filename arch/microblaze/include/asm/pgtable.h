@@ -74,7 +74,6 @@ static inline int pte_file(pte_t pte) { return 0; }
 
 extern unsigned long va_to_phys(unsigned long address);
 extern pte_t *va_to_pte(unsigned long address);
-extern unsigned long ioremap_bot, ioremap_base;
 
 /*
  * The following only work if pte_present() is true.
@@ -417,7 +416,7 @@ static inline unsigned long pte_update(pte_t *p, unsigned long clr,
 	mts     rmsr, %2\n\
 	nop"
 	: "=&r" (old), "=&r" (tmp), "=&r" (msr), "=m" (*p)
-	: "r" ((unsigned long)(p+1) - 4), "r" (clr), "r" (set), "m" (*p)
+	: "r" ((unsigned long)(p + 1) - 4), "r" (clr), "r" (set), "m" (*p)
 	: "cc");
 
 	return old;
@@ -585,28 +584,27 @@ void __init adjust_total_lowmem(void);
 void mapin_ram(void);
 int map_page(unsigned long va, phys_addr_t pa, int flags);
 
-extern unsigned long ioremap_base;
-extern unsigned long ioremap_bot;
+extern int mem_init_done;
 
 asmlinkage void __init mmu_init(void);
 
 void __init *early_get_page(void);
+
 #endif /* __ASSEMBLY__ */
 #endif /* __KERNEL__ */
 
 #endif /* CONFIG_MMU */
 
-
 #ifndef __ASSEMBLY__
-#ifdef __KERNEL__
+#include <asm-generic/pgtable.h>
+
+extern unsigned long ioremap_bot, ioremap_base;
+
 void *consistent_alloc(int gfp, size_t size, dma_addr_t *dma_handle);
 void consistent_free(void *vaddr);
 void consistent_sync(void *vaddr, size_t size, int direction);
 void consistent_sync_page(struct page *page, unsigned long offset,
 	size_t size, int direction);
-#endif /* __KERNEL__ */
-
-#include <asm-generic/pgtable.h>
 
 void setup_memory(void);
 #endif /* __ASSEMBLY__ */
