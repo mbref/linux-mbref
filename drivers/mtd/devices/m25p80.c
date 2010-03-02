@@ -546,6 +546,7 @@ static struct flash_info __devinitdata m25p_data [] = {
 	{ "w25x16", 0xef3015, 0, 64 * 1024, 32, SECT_4K, },
 	{ "w25x32", 0xef3016, 0, 64 * 1024, 64, SECT_4K, },
 	{ "w25x64", 0xef3017, 0, 64 * 1024, 128, SECT_4K, },
+	{ "w25q64", 0xef4017, 0, 64 * 1024, 128, SECT_4K, },
 };
 
 static struct flash_info *__devinit jedec_probe(struct spi_device *spi)
@@ -710,7 +711,11 @@ static int __devinit m25p_probe(struct spi_device *spi)
 		struct mtd_partition	*parts = NULL;
 		int			nr_parts = 0;
 
-		if (mtd_has_cmdlinepart()) {
+#ifdef CONFIG_MTD_OF_PARTS
+		nr_parts = of_mtd_parse_partitions(&spi->dev, spi->dev.archdata.of_node,&parts); 
+#endif
+
+		if (nr_parts <= 0 && mtd_has_cmdlinepart()) {
 			static const char *part_probes[]
 					= { "cmdlinepart", NULL, };
 
