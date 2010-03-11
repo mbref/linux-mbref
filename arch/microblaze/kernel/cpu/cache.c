@@ -15,25 +15,6 @@
 #include <asm/cpuinfo.h>
 #include <asm/pvr.h>
 
-static inline void __invalidate_flush_icache(unsigned int addr)
-{
-	__asm__ __volatile__ ("wic	%0, r0;"	\
-					: : "r" (addr));
-}
-
-static inline void __flush_dcache(unsigned int addr)
-{
-	__asm__ __volatile__ ("wdc.flush	%0, r0;"	\
-					: : "r" (addr));
-}
-
-static inline void __invalidate_dcache_wb(unsigned int baseaddr,
-						unsigned int offset)
-{
-	__asm__ __volatile__ ("wdc.clear	%0, %1;"	\
-					: : "r" (baseaddr), "r" (offset));
-}
-
 static inline void __enable_icache_msr(void)
 {
 	__asm__ __volatile__ ("	msrset	r0, %0;		\
@@ -262,14 +243,21 @@ static void __flush_icache_range_noirq(unsigned long start,
 static void __flush_icache_all_msr_irq(void)
 {
 	unsigned long flags;
-
+#ifndef ASM_LOOP
+	int i;
+#endif
 	pr_debug("%s\n", __func__);
 
 	local_irq_save(flags);
 	__disable_icache_msr();
-
+#ifdef ASM_LOOP
 	CACHE_ALL_LOOP(cpuinfo.icache_size, cpuinfo.icache_line_length, wic);
-
+#else
+	for (i = 0; i < cpuinfo.icache_size;
+		 i += cpuinfo.icache_line_length)
+			__asm__ __volatile__ ("wic	%0, r0;" \
+					: : "r" (i));
+#endif
 	__enable_icache_msr();
 	local_irq_restore(flags);
 }
@@ -277,35 +265,59 @@ static void __flush_icache_all_msr_irq(void)
 static void __flush_icache_all_nomsr_irq(void)
 {
 	unsigned long flags;
-
+#ifndef ASM_LOOP
+	int i;
+#endif
 	pr_debug("%s\n", __func__);
 
 	local_irq_save(flags);
 	__disable_icache_nomsr();
-
+#ifdef ASM_LOOP
 	CACHE_ALL_LOOP(cpuinfo.icache_size, cpuinfo.icache_line_length, wic);
-
+#else
+	for (i = 0; i < cpuinfo.icache_size;
+		 i += cpuinfo.icache_line_length)
+			__asm__ __volatile__ ("wic	%0, r0;" \
+					: : "r" (i));
+#endif
 	__enable_icache_nomsr();
 	local_irq_restore(flags);
 }
 
 static void __flush_icache_all_noirq(void)
 {
+#ifndef ASM_LOOP
+	int i;
+#endif
 	pr_debug("%s\n", __func__);
+#ifdef ASM_LOOP
 	CACHE_ALL_LOOP(cpuinfo.icache_size, cpuinfo.icache_line_length, wic);
+#else
+	for (i = 0; i < cpuinfo.icache_size;
+		 i += cpuinfo.icache_line_length)
+			__asm__ __volatile__ ("wic	%0, r0;" \
+					: : "r" (i));
+#endif
 }
 
 static void __invalidate_dcache_all_msr_irq(void)
 {
 	unsigned long flags;
-
+#ifndef ASM_LOOP
+	int i;
+#endif
 	pr_debug("%s\n", __func__);
 
 	local_irq_save(flags);
 	__disable_dcache_msr();
-
+#ifdef ASM_LOOP
 	CACHE_ALL_LOOP(cpuinfo.dcache_size, cpuinfo.dcache_line_length, wdc);
-
+#else
+	for (i = 0; i < cpuinfo.dcache_size;
+		 i += cpuinfo.dcache_line_length)
+			__asm__ __volatile__ ("wdc	%0, r0;" \
+					: : "r" (i));
+#endif
 	__enable_dcache_msr();
 	local_irq_restore(flags);
 }
@@ -313,22 +325,39 @@ static void __invalidate_dcache_all_msr_irq(void)
 static void __invalidate_dcache_all_nomsr_irq(void)
 {
 	unsigned long flags;
-
+#ifndef ASM_LOOP
+	int i;
+#endif
 	pr_debug("%s\n", __func__);
 
 	local_irq_save(flags);
 	__disable_dcache_nomsr();
-
+#ifdef ASM_LOOP
 	CACHE_ALL_LOOP(cpuinfo.dcache_size, cpuinfo.dcache_line_length, wdc);
-
+#else
+	for (i = 0; i < cpuinfo.dcache_size;
+		 i += cpuinfo.dcache_line_length)
+			__asm__ __volatile__ ("wdc	%0, r0;" \
+					: : "r" (i));
+#endif
 	__enable_dcache_nomsr();
 	local_irq_restore(flags);
 }
 
 static void __invalidate_dcache_all_noirq_wt(void)
 {
+#ifndef ASM_LOOP
+	int i;
+#endif
 	pr_debug("%s\n", __func__);
+#ifdef ASM_LOOP
 	CACHE_ALL_LOOP(cpuinfo.dcache_size, cpuinfo.dcache_line_length, wdc)
+#else
+	for (i = 0; i < cpuinfo.dcache_size;
+		 i += cpuinfo.dcache_line_length)
+			__asm__ __volatile__ ("wdc	%0, r0;" \
+					: : "r" (i));
+#endif
 }
 
 /* FIXME this is weird - should be only wdc but not work
@@ -345,7 +374,8 @@ static void __invalidate_dcache_all_wb(void)
 #else
 	for (i = 0; i < cpuinfo.dcache_size;
 		 i += cpuinfo.dcache_line_length)
-			__invalidate_dcache_wb(i, 0);
+			__asm__ __volatile__ ("wdc.clear	%0, r0;" \
+					: : "r" (i));
 #endif
 }
 
@@ -446,9 +476,19 @@ static void __invalidate_dcache_range_nomsr_irq(unsigned long start,
 
 static void __flush_dcache_all_wb(void)
 {
+#ifndef ASM_LOOP
+	int i;
+#endif
 	pr_debug("%s\n", __func__);
+#ifdef ASM_LOOP
 	CACHE_ALL_LOOP(cpuinfo.dcache_size, cpuinfo.dcache_line_length,
 				wdc.flush);
+#else
+	for (i = 0; i < cpuinfo.dcache_size;
+		 i += cpuinfo.dcache_line_length)
+			__asm__ __volatile__ ("wdc.flush	%0, r0;" \
+					: : "r" (i));
+#endif
 }
 
 static void __flush_dcache_range_wb(unsigned long start, unsigned long end)
