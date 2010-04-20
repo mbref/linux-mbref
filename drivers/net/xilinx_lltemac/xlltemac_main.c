@@ -1889,7 +1889,7 @@ static void _xenet_DmaSetupRecvBuffers(struct net_device *dev)
 		/* Get dma handle of skb->data */
 		new_skb_baddr = (u32) dma_map_single(dev->dev.parent,
 					new_skb->data, lp->max_frame_size,
-						     DMA_FROM_DEVICE);
+						     DMA_TO_DEVICE);
 		XLlDma_mBdSetBufAddr(BdCurPtr, new_skb_baddr);
 		XLlDma_mBdSetLength(BdCurPtr, lp->max_frame_size);
 		XLlDma_mBdSetId(BdCurPtr, new_skb);
