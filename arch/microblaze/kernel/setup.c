@@ -94,6 +94,12 @@ inline unsigned get_romfs_len(unsigned *addr)
 
 unsigned long kernel_tlb;
 
+#if defined(CONFIG_EARLY_PRINTK) && defined(CONFIG_SERIAL_UARTLITE_CONSOLE)
+#define eprintk early_printk
+#else
+#define eprintk printk
+#endif
+
 void __init machine_early_init(const char *cmdline, unsigned int ram,
 		unsigned int fdt, unsigned int msr, unsigned int tlb0,
 		unsigned int tlb1)
@@ -145,35 +151,35 @@ void __init machine_early_init(const char *cmdline, unsigned int ram,
 	/* setup kernel_tlb after BSS cleaning
 	 * Maybe worth to move to asm code */
 	kernel_tlb = tlb0 + tlb1;
-	/* early_printk("TLB1 0x%08x, TLB0 0x%08x, tlb 0x%x\n", tlb0,
+	/* eprintk("TLB1 0x%08x, TLB0 0x%08x, tlb 0x%x\n", tlb0,
 							tlb1, kernel_tlb); */
 
-	early_printk("Ramdisk addr 0x%08x, ", ram);
+	eprintk("Ramdisk addr 0x%08x, ", ram);
 	if (fdt)
-		early_printk("FDT at 0x%08x\n", fdt);
+		eprintk("FDT at 0x%08x\n", fdt);
 	else
-		early_printk("Compiled-in FDT at 0x%08x\n",
+		eprintk("Compiled-in FDT at 0x%08x\n",
 					(unsigned int)_fdt_start);
 
 #ifdef CONFIG_MTD_UCLINUX
-	early_printk("Found romfs @ 0x%08x (0x%08x)\n",
+	eprintk("Found romfs @ 0x%08x (0x%08x)\n",
 			romfs_base, romfs_size);
-	early_printk("#### klimit %p ####\n", old_klimit);
+	eprintk("#### klimit %p ####\n", old_klimit);
 	BUG_ON(romfs_size < 0); /* What else can we do? */
 
-	early_printk("Moved 0x%08x bytes from 0x%08x to 0x%08x\n",
+	eprintk("Moved 0x%08x bytes from 0x%08x to 0x%08x\n",
 			romfs_size, romfs_base, (unsigned)&_ebss);
 
-	early_printk("New klimit: 0x%08x\n", (unsigned)klimit);
+	eprintk("New klimit: 0x%08x\n", (unsigned)klimit);
 #endif
 
 #if CONFIG_XILINX_MICROBLAZE0_USE_MSR_INSTR
 	if (msr)
-		early_printk("!!!Your kernel has setup MSR instruction but "
+		eprintk("!!!Your kernel has setup MSR instruction but "
 				"CPU don't have it %d\n", msr);
 #else
 	if (!msr)
-		early_printk("!!!Your kernel not setup MSR instruction but "
+		eprintk("!!!Your kernel not setup MSR instruction but "
 				"CPU have it %d\n", msr);
 #endif
 
