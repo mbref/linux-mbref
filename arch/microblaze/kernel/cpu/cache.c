@@ -102,7 +102,7 @@ do {									\
 	int align = ~(cache_line_length - 1);				\
 	end = min(start + cache_size, end);				\
 	start &= align;							\
-	end = ((end & align) + cache_line_length);			\
+	end = ((end & align) == end) ? end - cache_line_length : (end & align);\
 } while (0);
 
 /*
@@ -141,7 +141,7 @@ do {									\
 do {									\
 	int step = -line_length;					\
 	int count = end - start;					\
-	BUG_ON(count <= 0);						\
+	BUG_ON(count < 0);						\
 									\
 	__asm__ __volatile__ (" 1:	" #op "	%0, %1;			\
 					bgtid	%1, 1b;			\
@@ -154,7 +154,7 @@ do {									\
 #define CACHE_RANGE_LOOP_1(start, end, line_length, op)			\
 do {									\
 	int volatile temp;						\
-	BUG_ON(end - start <= 0);					\
+	BUG_ON(end - start < 0);					\
 									\
 	__asm__ __volatile__ (" 1:	" #op "	%1, r0;			\
 					cmpu	%0, %1, %2;		\
