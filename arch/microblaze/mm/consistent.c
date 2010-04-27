@@ -101,7 +101,8 @@ void *consistent_alloc(int gfp, size_t size, dma_addr_t *dma_handle)
 # endif
 	if ((unsigned int)ret > cpuinfo.dcache_base &&
 				(unsigned int)ret < cpuinfo.dcache_high)
-		printk("ERROR: Your cache coherent area is CACHED!!!\n");
+		printk(KERN_WARNING
+			"ERROR: Your cache coherent area is CACHED!!!\n");
 
 	/* dma_handle is same as physical (shadowed) address */
 	*dma_handle = (dma_addr_t)ret;
