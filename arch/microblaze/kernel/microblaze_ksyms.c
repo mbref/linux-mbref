@@ -18,6 +18,7 @@
 #include <linux/io.h>
 #include <asm/page.h>
 #include <asm/system.h>
+#include <linux/ftrace.h>
 #include <linux/uaccess.h>
 
 /*
@@ -54,3 +55,8 @@ EXPORT_SYMBOL(memmove);
 #endif
 
 EXPORT_SYMBOL(__copy_tofrom_user);
+
+#ifdef CONFIG_FUNCTION_TRACER
+extern void _mcount(void);
+EXPORT_SYMBOL(_mcount);
+#endif

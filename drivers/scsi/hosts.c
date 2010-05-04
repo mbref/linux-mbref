@@ -40,7 +40,7 @@
 #include "scsi_logging.h"
 
 
-static int scsi_host_next_hn;		/* host_no for next new host */
+static atomic_t scsi_host_next_hn;	/* host_no for next new host */
 
 
 static void scsi_host_cls_release(struct device *dev)
@@ -180,14 +180,20 @@ void scsi_remove_host(struct Scsi_Host *shost)
 EXPORT_SYMBOL(scsi_remove_host);
 
 /**
- * scsi_add_host - add a scsi host
+ * scsi_add_host_with_dma - add a scsi host with dma device
  * @shost:	scsi host pointer to add
  * @dev:	a struct device of type scsi class
+ * @dma_dev:	dma device for the host
+ *
+ * Note: You rarely need to worry about this unless you're in a
+ * virtualised host environments, so use the simpler scsi_add_host()
+ * function instead.
  *
  * Return value: 
  * 	0 on success / != 0 for error
  **/
-int scsi_add_host(struct Scsi_Host *shost, struct device *dev)
+int scsi_add_host_with_dma(struct Scsi_Host *shost, struct device *dev,
+			   struct device *dma_dev)
 {
 	struct scsi_host_template *sht = shost->hostt;
 	int error = -EINVAL;
@@ -207,6 +213,7 @@ int scsi_add_host(struct Scsi_Host *shost, struct device *dev)
 
 	if (!shost->shost_gendev.parent)
 		shost->shost_gendev.parent = dev ? dev : &platform_bus;
+	shost->dma_dev = dma_dev;
 
 	error = device_add(&shost->shost_gendev);
 	if (error)
@@ -262,7 +269,7 @@ int scsi_add_host(struct Scsi_Host *shost, struct device *dev)
  fail:
 	return error;
 }
-EXPORT_SYMBOL(scsi_add_host);
+EXPORT_SYMBOL(scsi_add_host_with_dma);
 
 static void scsi_host_dev_release(struct device *dev)
 {
@@ -333,7 +340,11 @@ struct Scsi_Host *scsi_host_alloc(struct scsi_host_template *sht, int privsize)
 
 	mutex_init(&shost->scan_mutex);
 
-	shost->host_no = scsi_host_next_hn++; /* XXX(hch): still racy */
+	/*
+	 * subtract one because we increment first then return, but we need to
+	 * know what the next host number was before increment
+	 */
+	shost->host_no = atomic_inc_return(&scsi_host_next_hn) - 1;
 	shost->dma_channel = 0xff;
 
 	/* These three are default values which can be overridden */

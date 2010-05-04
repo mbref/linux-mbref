@@ -16,21 +16,6 @@
 #define _ASM_MICROBLAZE_PROM_H
 #ifdef __KERNEL__
 
-#ifndef __ASSEMBLY__
-#include <linux/types.h>
-#include <linux/proc_fs.h>
-#include <linux/platform_device.h>
-#include <asm/irq.h>
-#include <asm/atomic.h>
-#endif	/* __ASSEMBLY__ */
-
-#define OF_ROOT_NODE_ADDR_CELLS_DEFAULT	1
-#define OF_ROOT_NODE_SIZE_CELLS_DEFAULT	1
-
-#define of_compat_cmp(s1, s2, l)	strncasecmp((s1), (s2), (l))
-#define of_prop_cmp(s1, s2)		strcmp((s1), (s2))
-#define of_node_cmp(s1, s2)		strcasecmp((s1), (s2))
-
 /* Definitions used by the flattened device tree */
 #define OF_DT_HEADER		0xd00dfeed /* marker */
 #define OF_DT_BEGIN_NODE	0x1 /* Start of node, full name */
@@ -42,6 +27,20 @@
 #define OF_DT_VERSION		0x10
 
 #ifndef __ASSEMBLY__
+
+#include <linux/types.h>
+#include <linux/proc_fs.h>
+#include <linux/platform_device.h>
+#include <asm/irq.h>
+#include <asm/atomic.h>
+
+#define OF_ROOT_NODE_ADDR_CELLS_DEFAULT	1
+#define OF_ROOT_NODE_SIZE_CELLS_DEFAULT	1
+
+#define of_compat_cmp(s1, s2, l)	strncasecmp((s1), (s2), (l))
+#define of_prop_cmp(s1, s2)		strcmp((s1), (s2))
+#define of_node_cmp(s1, s2)		strcasecmp((s1), (s2))
+
 /*
  * This is what gets passed to the kernel by prom_init or kexec
  *
@@ -158,6 +157,21 @@ extern int prom_remove_property(struct device_node *np, struct property *prop);
 extern int prom_update_property(struct device_node *np,
 				struct property *newprop,
 				struct property *oldprop);
+
+#ifdef CONFIG_PCI
+/*
+ * PCI <-> OF matching functions
+ * (XXX should these be here?)
+ */
+struct pci_bus;
+struct pci_dev;
+extern int pci_device_from_OF_node(struct device_node *node,
+					u8 *bus, u8 *devfn);
+extern struct device_node *pci_busdev_to_OF_node(struct pci_bus *bus,
+							int devfn);
+extern struct device_node *pci_device_to_OF_node(struct pci_dev *dev);
+extern void pci_create_OF_bus_map(void);
+#endif
 
 extern struct resource *request_OF_resource(struct device_node *node,
 				int index, const char *name_postfix);

@@ -45,7 +45,7 @@ static struct fb_fix_screeninfo uvesafb_fix __devinitdata = {
 static int mtrr		__devinitdata = 3; /* enable mtrr by default */
 static int blank	= 1;		   /* enable blanking by default */
 static int ypan		= 1; 		 /* 0: scroll, 1: ypan, 2: ywrap */
-static int pmi_setpal	__devinitdata = 1; /* use PMI for palette changes */
+static bool pmi_setpal	__devinitdata = true; /* use PMI for palette changes */
 static int nocrtc	__devinitdata; /* ignore CRTC settings */
 static int noedid	__devinitdata; /* don't try DDC transfers */
 static int vram_remap	__devinitdata; /* set amt. of memory to be used */
@@ -67,11 +67,13 @@ static DEFINE_MUTEX(uvfb_lock);
  * find the kernel part of the task struct, copy the registers and
  * the buffer contents and then complete the task.
  */
-static void uvesafb_cn_callback(void *data)
+static void uvesafb_cn_callback(struct cn_msg *msg, struct netlink_skb_parms *nsp)
 {
-	struct cn_msg *msg = data;
 	struct uvesafb_task *utask;
 	struct uvesafb_ktask *task;
+
+	if (!cap_raised(nsp->eff_cap, CAP_SYS_ADMIN))
+		return;
 
 	if (msg->seq >= UVESAFB_TASKS_MAX)
 		return;
@@ -2002,11 +2004,7 @@ static void __devexit uvesafb_exit(void)
 
 module_exit(uvesafb_exit);
 
-static int param_get_scroll(char *buffer, struct kernel_param *kp)
-{
-	return 0;
-}
-
+#define param_get_scroll NULL
 static int param_set_scroll(const char *val, struct kernel_param *kp)
 {
 	ypan = 0;
@@ -2017,6 +2015,8 @@ static int param_set_scroll(const char *val, struct kernel_param *kp)
 		ypan = 1;
 	else if (!strcmp(val, "ywrap"))
 		ypan = 2;
+	else
+		return -EINVAL;
 
 	return 0;
 }

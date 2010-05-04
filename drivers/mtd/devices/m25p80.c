@@ -54,7 +54,7 @@
 #define	SR_SRWD			0x80	/* SR write protect */
 
 /* Define max times to check status register before we give up. */
-#define	MAX_READY_WAIT_JIFFIES	(10 * HZ)	/* eg. M25P128 specs 6s max sector erase */
+#define	MAX_READY_WAIT_JIFFIES	(40 * HZ)	/* M25P16 specs 40s max chip erase */
 #define	CMD_SIZE		4
 
 #ifdef CONFIG_M25PXX_USE_FAST_READ
@@ -479,6 +479,7 @@ struct flash_info {
 
 	u16		flags;
 #define	SECT_4K		0x01		/* OPCODE_BE_4K works uniformly */
+#define	SECT_32K	0x02		/* OPCODE_BE_32K */
 };
 
 
@@ -499,6 +500,9 @@ static struct flash_info __devinitdata m25p_data [] = {
 	{ "at26df081a", 0x1f4501, 0, 64 * 1024, 16, SECT_4K, },
 	{ "at26df161a", 0x1f4601, 0, 64 * 1024, 32, SECT_4K, },
 	{ "at26df321",  0x1f4701, 0, 64 * 1024, 64, SECT_4K, },
+
+	/* Macronix */
+	{ "mx25l12805d", 0xc22018, 0, 64 * 1024, 256, },
 
 	/* Spansion -- single (large) sector size only, at least
 	 * for the chips listed here (without boot sectors).
@@ -528,6 +532,7 @@ static struct flash_info __devinitdata m25p_data [] = {
 	{ "m25p64",  0x202017,  0, 64 * 1024, 128, },
 	{ "m25p128", 0x202018, 0, 256 * 1024, 64, },
 
+	{ "m45pe10", 0x204011,  0, 64 * 1024, 2, },
 	{ "m45pe80", 0x204014,  0, 64 * 1024, 16, },
 	{ "m45pe16", 0x204015,  0, 64 * 1024, 32, },
 
@@ -542,6 +547,12 @@ static struct flash_info __devinitdata m25p_data [] = {
 	{ "w25x16", 0xef3015, 0, 64 * 1024, 32, SECT_4K, },
 	{ "w25x32", 0xef3016, 0, 64 * 1024, 64, SECT_4K, },
 	{ "w25x64", 0xef3017, 0, 64 * 1024, 128, SECT_4K, },
+	/* Winbond -- w25q "blocks" are 64K, "sectors" are 32KiB */
+	/* w25q64 supports 4KiB, 32KiB and 64KiB sectors erase size. */
+	/* To support JFFS2, the minimum erase size is 8KiB(>4KiB). */
+	/* And thus, the sector size of w25q64 is set to 32KiB for */
+	/* JFFS2 support. */
+	{ "w25q64", 0xef4017, 0, 64 * 1024, 128, SECT_32K, },
 };
 
 static struct flash_info *__devinit jedec_probe(struct spi_device *spi)
@@ -669,6 +680,9 @@ static int __devinit m25p_probe(struct spi_device *spi)
 	if (info->flags & SECT_4K) {
 		flash->erase_opcode = OPCODE_BE_4K;
 		flash->mtd.erasesize = 4096;
+	} else if (info->flags & SECT_32K) {
+		flash->erase_opcode = OPCODE_BE_32K;
+		flash->mtd.erasesize = 32768;
 	} else {
 		flash->erase_opcode = OPCODE_SE;
 		flash->mtd.erasesize = info->sector_size;
@@ -706,7 +720,11 @@ static int __devinit m25p_probe(struct spi_device *spi)
 		struct mtd_partition	*parts = NULL;
 		int			nr_parts = 0;
 
-		if (mtd_has_cmdlinepart()) {
+#ifdef CONFIG_MTD_OF_PARTS
+		nr_parts = of_mtd_parse_partitions(&spi->dev, spi->dev.archdata.of_node,&parts); 
+#endif
+
+		if (nr_parts <= 0 && mtd_has_cmdlinepart()) {
 			static const char *part_probes[]
 					= { "cmdlinepart", NULL, };
 
@@ -732,7 +750,7 @@ static int __devinit m25p_probe(struct spi_device *spi)
 			flash->partitioned = 1;
 			return add_mtd_partitions(&flash->mtd, parts, nr_parts);
 		}
-	} else if (data->nr_parts)
+	} else if (data && data->nr_parts)
 		dev_warn(&spi->dev, "ignoring %d default partitions on %s\n",
 				data->nr_parts, data->name);
 

@@ -188,6 +188,7 @@ int cifs_posix_open(char *full_path, struct inode **pinode,
 	FILE_UNIX_BASIC_INFO *presp_data;
 	__u32 posix_flags = 0;
 	struct cifs_sb_info *cifs_sb = CIFS_SB(sb);
+	struct cifs_fattr fattr;
 
 	cFYI(1, ("posix open %s", full_path));
 
@@ -211,8 +212,6 @@ int cifs_posix_open(char *full_path, struct inode **pinode,
 		posix_flags |= SMB_O_EXCL;
 	if (oflags & O_TRUNC)
 		posix_flags |= SMB_O_TRUNC;
-	if (oflags & O_APPEND)
-		posix_flags |= SMB_O_APPEND;
 	if (oflags & O_SYNC)
 		posix_flags |= SMB_O_SYNC;
 	if (oflags & O_DIRECTORY)
@@ -236,22 +235,21 @@ int cifs_posix_open(char *full_path, struct inode **pinode,
 	if (presp_data->Type == cpu_to_le32(-1))
 		goto posix_open_ret; /* open ok, caller does qpathinfo */
 
-	/* get new inode and set it up */
 	if (!pinode)
 		goto posix_open_ret; /* caller does not need info */
 
+	cifs_unix_basic_to_fattr(&fattr, presp_data, cifs_sb);
+
+	/* get new inode and set it up */
 	if (*pinode == NULL) {
-		__u64 unique_id = le64_to_cpu(presp_data->UniqueId);
-		*pinode = cifs_new_inode(sb, &unique_id);
+		*pinode = cifs_iget(sb, &fattr);
+		if (!*pinode) {
+			rc = -ENOMEM;
+			goto posix_open_ret;
+		}
+	} else {
+		cifs_fattr_to_inode(*pinode, &fattr);
 	}
-	/* else an inode was passed in. Update its info, don't create one */
-
-	/* We do not need to close the file if new_inode fails since
-	   the caller will retry qpathinfo as long as inode is null */
-	if (*pinode == NULL)
-		goto posix_open_ret;
-
-	posix_fill_in_inode(*pinode, presp_data, 1);
 
 	cifs_fill_fileinfo(*pinode, *pnetfid, cifs_sb->tcon, write_only);
 
@@ -307,8 +305,9 @@ cifs_create(struct inode *inode, struct dentry *direntry, int mode,
 
 	full_path = build_path_from_dentry(direntry);
 	if (full_path == NULL) {
+		rc = -ENOMEM;
 		FreeXid(xid);
-		return -ENOMEM;
+		return rc;
 	}
 
 	if (oplockEnabled)
@@ -424,9 +423,10 @@ cifs_create(struct inode *inode, struct dentry *direntry, int mode,
 			args.uid = NO_CHANGE_64;
 			args.gid = NO_CHANGE_64;
 		}
-		CIFSSMBUnixSetInfo(xid, tcon, full_path, &args,
-			cifs_sb->local_nls,
-			cifs_sb->mnt_cifs_flags & CIFS_MOUNT_MAP_SPECIAL_CHR);
+		CIFSSMBUnixSetPathInfo(xid, tcon, full_path, &args,
+					cifs_sb->local_nls,
+					cifs_sb->mnt_cifs_flags &
+						CIFS_MOUNT_MAP_SPECIAL_CHR);
 	} else {
 		/* BB implement mode setting via Windows security
 		   descriptors e.g. */
@@ -514,10 +514,10 @@ int cifs_mknod(struct inode *inode, struct dentry *direntry, int mode,
 			args.uid = NO_CHANGE_64;
 			args.gid = NO_CHANGE_64;
 		}
-		rc = CIFSSMBUnixSetInfo(xid, pTcon, full_path,
-			&args, cifs_sb->local_nls,
-			cifs_sb->mnt_cifs_flags &
-				CIFS_MOUNT_MAP_SPECIAL_CHR);
+		rc = CIFSSMBUnixSetPathInfo(xid, pTcon, full_path, &args,
+					    cifs_sb->local_nls,
+					    cifs_sb->mnt_cifs_flags &
+						CIFS_MOUNT_MAP_SPECIAL_CHR);
 
 		if (!rc) {
 			rc = cifs_get_inode_info_unix(&newinode, full_path,
@@ -540,8 +540,9 @@ int cifs_mknod(struct inode *inode, struct dentry *direntry, int mode,
 			buf = kmalloc(sizeof(FILE_ALL_INFO), GFP_KERNEL);
 			if (buf == NULL) {
 				kfree(full_path);
+				rc = -ENOMEM;
 				FreeXid(xid);
-				return -ENOMEM;
+				return rc;
 			}
 
 			rc = CIFSSMBOpen(xid, pTcon, full_path,
@@ -641,6 +642,15 @@ cifs_lookup(struct inode *parent_dir_inode, struct dentry *direntry,
 			}
 	}
 
+	/*
+	 * O_EXCL: optimize away the lookup, but don't hash the dentry. Let
+	 * the VFS handle the create.
+	 */
+	if (nd && (nd->flags & LOOKUP_EXCL)) {
+		d_instantiate(direntry, NULL);
+		return 0;
+	}
+
 	/* can not grab the rename sem here since it would
 	deadlock in the cases (beginning of sys_rename itself)
 	in which we already have the sb rename sem */
@@ -668,7 +678,7 @@ cifs_lookup(struct inode *parent_dir_inode, struct dentry *direntry,
 	 * reduction in network traffic in the other paths.
 	 */
 	if (pTcon->unix_ext) {
-		if (!(nd->flags & (LOOKUP_PARENT | LOOKUP_DIRECTORY)) &&
+		if (nd && !(nd->flags & (LOOKUP_PARENT | LOOKUP_DIRECTORY)) &&
 		     (nd->flags & LOOKUP_OPEN) && !pTcon->broken_posix_open &&
 		     (nd->intent.open.flags & O_CREAT)) {
 			rc = cifs_posix_open(full_path, &newInode,

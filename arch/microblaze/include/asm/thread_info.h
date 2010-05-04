@@ -19,7 +19,6 @@
 #ifndef __ASSEMBLY__
 # include <linux/types.h>
 # include <asm/processor.h>
-# include <asm/segment.h>
 
 /*
  * low level task data that entry.S needs immediate access to
@@ -60,6 +59,10 @@ struct cpu_context {
 	__u32	fsr;
 };
 
+typedef struct {
+	unsigned long seg;
+} mm_segment_t;
+
 struct thread_info {
 	struct task_struct	*task; /* main task structure */
 	struct exec_domain	*exec_domain; /* execution domain */
@@ -75,8 +78,6 @@ struct thread_info {
 
 /*
  * macros/functions for gaining access to the thread information structure
- *
- * preempt_count needs to be 1 initially, until the scheduler is functional.
  */
 #define INIT_THREAD_INFO(tsk)			\
 {						\
@@ -84,7 +85,7 @@ struct thread_info {
 	.exec_domain	= &default_exec_domain,	\
 	.flags		= 0,			\
 	.cpu		= 0,			\
-	.preempt_count	= 1,			\
+	.preempt_count	= INIT_PREEMPT_COUNT,	\
 	.addr_limit	= KERNEL_DS,		\
 	.restart_block = {			\
 		.fn = do_no_restart_syscall,	\

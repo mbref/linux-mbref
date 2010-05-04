@@ -148,7 +148,8 @@ static int xilinx_spi_setup_transfer(struct spi_device *spi,
 {
 	u8 bits_per_word;
 
-	bits_per_word = (t) ? t->bits_per_word : spi->bits_per_word;
+	bits_per_word = (t && t->bits_per_word) 
+			 ? t->bits_per_word : spi->bits_per_word;
 	if (bits_per_word != 8) {
 		dev_err(&spi->dev, "%s, unsupported bits_per_word=%d\n",
 			__func__, bits_per_word);
@@ -157,9 +158,6 @@ static int xilinx_spi_setup_transfer(struct spi_device *spi,
 
 	return 0;
 }
-
-/* the spi->mode bits understood by this driver: */
-#define MODEBITS (SPI_CPOL | SPI_CPHA)
 
 static int xilinx_spi_setup(struct spi_device *spi)
 {
@@ -170,21 +168,9 @@ static int xilinx_spi_setup(struct spi_device *spi)
 	xspi = spi_master_get_devdata(spi->master);
 	bitbang = &xspi->bitbang;
 
-	if (!spi->bits_per_word)
-		spi->bits_per_word = 8;
-
-	if (spi->mode & ~MODEBITS) {
-		dev_err(&spi->dev, "%s, unsupported mode bits %x\n",
-			__func__, spi->mode & ~MODEBITS);
-		return -EINVAL;
-	}
-
 	retval = xilinx_spi_setup_transfer(spi, NULL);
 	if (retval < 0)
 		return retval;
-
-	dev_dbg(&spi->dev, "%s, mode %d, %u bits/w, %u nsec/bit\n",
-		__func__, spi->mode & MODEBITS, spi->bits_per_word, 0);
 
 	return 0;
 }
@@ -332,6 +318,9 @@ static int __init xilinx_spi_of_probe(struct of_device *ofdev,
 		dev_warn(&ofdev->dev, "no IRQ found\n");
 		goto put_master;
 	}
+
+	/* the spi->mode bits understood by this driver: */
+	master->mode_bits = SPI_CPOL | SPI_CPHA;
 
 	xspi = spi_master_get_devdata(master);
 	xspi->bitbang.master = spi_master_get(master);

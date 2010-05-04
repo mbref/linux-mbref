@@ -221,7 +221,8 @@ static void ctrl_callback(struct urb *urb)
 	case -ENOENT:
 		break;
 	default:
-		dev_warn(&urb->dev->dev, "ctrl urb status %d\n", status);
+		if (printk_ratelimit())
+			dev_warn(&urb->dev->dev, "ctrl urb status %d\n", status);
 	}
 	dev = urb->context;
 	clear_bit(RX_REG_SET, &dev->flags);
@@ -323,7 +324,7 @@ static int rtl8150_set_mac_address(struct net_device *netdev, void *p)
 		dbg("%02X:", netdev->dev_addr[i]);
 	dbg("%02X\n", netdev->dev_addr[i]);
 	/* Set the IDR registers. */
-	set_registers(dev, IDR, sizeof(netdev->dev_addr), netdev->dev_addr);
+	set_registers(dev, IDR, netdev->addr_len, netdev->dev_addr);
 #ifdef EEPROM_WRITE
 	{
 	u8 cr;
@@ -442,10 +443,12 @@ static void read_bulk_callback(struct urb *urb)
 	case -ENOENT:
 		return;	/* the urb is in unlink state */
 	case -ETIME:
-		dev_warn(&urb->dev->dev, "may be reset is needed?..\n");
+		if (printk_ratelimit())
+			dev_warn(&urb->dev->dev, "may be reset is needed?..\n");
 		goto goon;
 	default:
-		dev_warn(&urb->dev->dev, "Rx status %d\n", status);
+		if (printk_ratelimit())
+			dev_warn(&urb->dev->dev, "Rx status %d\n", status);
 		goto goon;
 	}
 

@@ -6,8 +6,17 @@ mainmenu "Linux/Microblaze Kernel Configuration"
 config MICROBLAZE
 	def_bool y
 	select HAVE_LMB
+	select HAVE_FUNCTION_TRACER
+	select HAVE_FUNCTION_TRACE_MCOUNT_TEST
+	select HAVE_FUNCTION_GRAPH_TRACER
+	select HAVE_DYNAMIC_FTRACE
+	select HAVE_FTRACE_MCOUNT_RECORD
 	select USB_ARCH_HAS_EHCI
 	select ARCH_WANT_OPTIONAL_GPIOLIB
+	select HAVE_OPROFILE
+	select HAVE_DMA_ATTRS
+	select HAVE_DMA_API_DEBUG
+	select TRACING_SUPPORT
 
 config SWAP
 	def_bool n
@@ -51,20 +60,23 @@ config GENERIC_CLOCKEVENTS
 config GENERIC_HARDIRQS_NO__DO_IRQ
 	def_bool y
 
-config STACKTRACE_SUPPORT
-	def_bool y
-
 config GENERIC_GPIO
 	def_bool y
 
-config PCI
-	def_bool n
+config GENERIC_CSUM
+	def_bool y
 
-#config NO_DMA
-#	def_bool y
+config STACKTRACE_SUPPORT
+	def_bool y
+
+config LOCKDEP_SUPPORT
+	def_bool y
+
+config HAVE_LATENCYTOP_SUPPORT
+	def_bool y
 
 config DTC
-       def_bool y
+	def_bool y
 
 source "init/Kconfig"
 
@@ -74,7 +86,7 @@ source "arch/microblaze/platform/Kconfig.platform"
 
 menu "Processor type and features"
 
-source kernel/time/Kconfig
+source "kernel/time/Kconfig"
 
 source "kernel/Kconfig.preempt"
 
@@ -204,6 +216,10 @@ config TASK_SIZE
 	depends on MMU
 	default "0x80000000"
 
+config KERNEL_PAD
+	hex "Kernel PAD for unpacking" if ADVANCED_OPTIONS
+	default "0x80000" if MMU
+
 config CONSISTENT_START_BOOL
 	bool "Set custom consistent memory pool address"
 	depends on ADVANCED_OPTIONS && NOT_COHERENT_CACHE
@@ -237,6 +253,25 @@ source "mm/Kconfig"
 menu "Exectuable file formats"
 
 source "fs/Kconfig.binfmt"
+
+endmenu
+
+menu "Bus Options"
+
+config PCI
+	bool "PCI support"
+
+config PCI_DOMAINS
+	def_bool PCI
+
+config PCI_SYSCALL
+	def_bool PCI
+
+config PCI_XILINX
+	bool "Xilinx PCI host bridge support"
+	depends on PCI
+
+source "drivers/pci/Kconfig"
 
 endmenu
 

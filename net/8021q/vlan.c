@@ -287,8 +287,11 @@ out_uninit_applicant:
 	if (ngrp)
 		vlan_gvrp_uninit_applicant(real_dev);
 out_free_group:
-	if (ngrp)
-		vlan_group_free(ngrp);
+	if (ngrp) {
+		hlist_del_rcu(&ngrp->hlist);
+		/* Free the group, after all cpu's are done. */
+		call_rcu(&ngrp->rcu, vlan_rcu_free);
+	}
 	return err;
 }
 
@@ -378,13 +381,13 @@ static void vlan_sync_address(struct net_device *dev,
 	 * the new address */
 	if (compare_ether_addr(vlandev->dev_addr, vlan->real_dev_addr) &&
 	    !compare_ether_addr(vlandev->dev_addr, dev->dev_addr))
-		dev_unicast_delete(dev, vlandev->dev_addr, ETH_ALEN);
+		dev_unicast_delete(dev, vlandev->dev_addr);
 
 	/* vlan address was equal to the old address and is different from
 	 * the new address */
 	if (!compare_ether_addr(vlandev->dev_addr, vlan->real_dev_addr) &&
 	    compare_ether_addr(vlandev->dev_addr, dev->dev_addr))
-		dev_unicast_add(dev, vlandev->dev_addr, ETH_ALEN);
+		dev_unicast_add(dev, vlandev->dev_addr);
 
 	memcpy(vlan->real_dev_addr, dev->dev_addr, ETH_ALEN);
 }
@@ -758,7 +761,7 @@ static void __exit vlan_cleanup_module(void)
 		BUG_ON(!hlist_empty(&vlan_group_hash[i]));
 
 	unregister_pernet_gen_device(vlan_net_id, &vlan_net_ops);
-	synchronize_net();
+	rcu_barrier(); /* Wait for completion of call_rcu()'s */
 
 	vlan_gvrp_uninit();
 }

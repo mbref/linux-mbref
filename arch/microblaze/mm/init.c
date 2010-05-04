@@ -23,6 +23,9 @@
 #include <asm/sections.h>
 #include <asm/tlb.h>
 
+/* Use for MMU and noMMU because of PCI generic code */
+int mem_init_done;
+
 #ifndef CONFIG_MMU
 unsigned int __page_offset;
 EXPORT_SYMBOL(__page_offset);
@@ -30,7 +33,6 @@ EXPORT_SYMBOL(__page_offset);
 #else
 DEFINE_PER_CPU(struct mmu_gather, mmu_gathers);
 
-int mem_init_done;
 static int init_bootmem_done;
 #endif /* CONFIG_MMU */
 
@@ -163,7 +165,6 @@ void free_init_pages(char *what, unsigned long begin, unsigned long end)
 	for (addr = begin; addr < end; addr += PAGE_SIZE) {
 		ClearPageReserved(virt_to_page(addr));
 		init_page_count(virt_to_page(addr));
-		memset((void *)addr, 0xcc, PAGE_SIZE);
 		free_page(addr);
 		totalram_pages++;
 	}
@@ -181,7 +182,8 @@ void free_initrd_mem(unsigned long start, unsigned long end)
 		totalram_pages++;
 		pages++;
 	}
-	printk(KERN_NOTICE "Freeing initrd memory: %dk freed\n", pages);
+	printk(KERN_NOTICE "Freeing initrd memory: %dk freed\n",
+					(int)(pages * (PAGE_SIZE / 1024)));
 }
 #endif
 
@@ -192,12 +194,6 @@ void free_initmem(void)
 			(unsigned long)(&__init_end));
 }
 
-/* FIXME from arch/powerpc/mm/mem.c*/
-void show_mem(void)
-{
-	printk(KERN_NOTICE "%s\n", __func__);
-}
-
 void __init mem_init(void)
 {
 	high_memory = (void *)__va(memory_end);
@@ -205,22 +201,16 @@ void __init mem_init(void)
 	totalram_pages += free_all_bootmem();
 
 	printk(KERN_INFO "Memory: %luk/%luk available\n",
-	       (unsigned long) nr_free_pages() << (PAGE_SHIFT-10),
+	       nr_free_pages() << (PAGE_SHIFT-10),
 	       num_physpages << (PAGE_SHIFT-10));
-#ifdef CONFIG_MMU
 	mem_init_done = 1;
-#endif
 }
 
 #ifndef CONFIG_MMU
-/* Check against bounds of physical memory */
-int ___range_ok(unsigned long addr, unsigned long size)
+int page_is_ram(unsigned long pfn)
 {
-	return ((addr < memory_start) ||
-		((addr + size) > memory_end));
+	return __range_ok(pfn, 0);
 }
-EXPORT_SYMBOL(___range_ok);
-
 #else
 int page_is_ram(unsigned long pfn)
 {
@@ -286,10 +276,16 @@ asmlinkage void __init mmu_init(void)
 		machine_restart(NULL);
 	}
 
-	if ((u32) lmb.memory.region[0].size < 0x1000000) {
-		printk(KERN_EMERG "Memory must be greater than 16MB\n");
+	if ((u32) lmb.memory.region[0].size < 0x400000) {
+		printk(KERN_EMERG "Memory must be greater than 4MB\n");
 		machine_restart(NULL);
 	}
+
+	if ((u32) lmb.memory.region[0].size < kernel_tlb) {
+		printk(KERN_EMERG "Kernel size is greater than memory node\n");
+		machine_restart(NULL);
+	}
+
 	/* Find main memory where the kernel is */
 	memory_start = (u32) lmb.memory.region[0].base;
 	memory_end = (u32) lmb.memory.region[0].base +
@@ -340,12 +336,35 @@ void __init *early_get_page(void)
 		p = alloc_bootmem_pages(PAGE_SIZE);
 	} else {
 		/*
-		 * Mem start + 32MB -> here is limit
+		 * Mem start + kernel_tlb -> here is limit
 		 * because of mem mapping from head.S
 		 */
 		p = __va(lmb_alloc_base(PAGE_SIZE, PAGE_SIZE,
-					memory_start + 0x2000000));
+					memory_start + kernel_tlb));
 	}
 	return p;
 }
+
 #endif /* CONFIG_MMU */
+
+void * __init_refok alloc_maybe_bootmem(size_t size, gfp_t mask)
+{
+	if (mem_init_done)
+		return kmalloc(size, mask);
+	else
+		return alloc_bootmem(size);
+}
+
+void * __init_refok zalloc_maybe_bootmem(size_t size, gfp_t mask)
+{
+	void *p;
+
+	if (mem_init_done)
+		p = kzalloc(size, mask);
+	else {
+		p = alloc_bootmem(size);
+		if (p)
+			memset(p, 0, size);
+	}
+	return p;
+}

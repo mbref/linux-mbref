@@ -957,7 +957,7 @@ static int au1000_tx(struct sk_buff *skb, struct net_device *dev)
 		/* We've wrapped around and the transmitter is still busy */
 		netif_stop_queue(dev);
 		aup->tx_full = 1;
-		return 1;
+		return NETDEV_TX_BUSY;
 	}
 	else if (buff_stat & TX_T_DONE) {
 		update_tx_stats(dev, ptxd->status);
@@ -1089,7 +1089,14 @@ static struct net_device * au1000_probe(int port_num)
 		return NULL;
 	}
 
-	if ((err = register_netdev(dev)) != 0) {
+	dev->base_addr = base;
+	dev->irq = irq;
+	dev->netdev_ops = &au1000_netdev_ops;
+	SET_ETHTOOL_OPS(dev, &au1000_ethtool_ops);
+	dev->watchdog_timeo = ETH_TX_TIMEOUT;
+
+	err = register_netdev(dev);
+	if (err != 0) {
 		printk(KERN_ERR "%s: Cannot register net device, error %d\n",
 				DRV_NAME, err);
 		free_netdev(dev);
@@ -1206,12 +1213,6 @@ static struct net_device * au1000_probe(int port_num)
 		aup->tx_dma_ring[i]->len = 0;
 		aup->tx_db_inuse[i] = pDB;
 	}
-
-	dev->base_addr = base;
-	dev->irq = irq;
-	dev->netdev_ops = &au1000_netdev_ops;
-	SET_ETHTOOL_OPS(dev, &au1000_ethtool_ops);
-	dev->watchdog_timeo = ETH_TX_TIMEOUT;
 
 	/*
 	 * The boot code uses the ethernet controller, so reset it to start

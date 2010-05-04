@@ -116,7 +116,9 @@ struct ehci_hcd {			/* one per controller */
 	struct timer_list	watchdog;
 	unsigned long		actions;
 	unsigned		stamp;
+	unsigned		random_frame;
 	unsigned long		next_statechange;
+	ktime_t			last_periodic_enable;
 	u32			command;
 
 	/* SILICON QUIRKS */
@@ -125,6 +127,7 @@ struct ehci_hcd {			/* one per controller */
 	unsigned		big_endian_mmio:1;
 	unsigned		big_endian_desc:1;
 	unsigned		has_amcc_usb23:1;
+	unsigned		broken_periodic:1;
 
 	/* required for usb32 quirk */
 	#define OHCI_CTRL_HCFS          (3 << 6)
@@ -353,7 +356,9 @@ struct ehci_qh {
 	unsigned short		period;		/* polling interval */
 	unsigned short		start;		/* where polling starts */
 #define NO_FRAME ((unsigned short)~0)			/* pick new start */
+
 	struct usb_device	*dev;		/* access to TT */
+	unsigned		clearing_tt:1;	/* Clear-TT-Buf in progress */
 } __attribute__ ((aligned (32)));
 
 /*-------------------------------------------------------------------------*/

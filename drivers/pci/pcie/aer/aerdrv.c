@@ -52,7 +52,7 @@ static struct pci_error_handlers aer_error_handlers = {
 
 static struct pcie_port_service_driver aerdriver = {
 	.name		= "aer",
-	.port_type	= PCIE_ANY_PORT,
+	.port_type	= PCIE_RC_PORT,
 	.service	= PCIE_PORT_SERVICE_AER,
 
 	.probe		= aer_probe,
@@ -77,7 +77,7 @@ void pci_no_aer(void)
  *
  * Invoked when Root Port detects AER messages.
  **/
-static irqreturn_t aer_irq(int irq, void *context)
+irqreturn_t aer_irq(int irq, void *context)
 {
 	unsigned int status, id;
 	struct pcie_device *pdev = (struct pcie_device *)context;
@@ -126,6 +126,7 @@ static irqreturn_t aer_irq(int irq, void *context)
 
 	return IRQ_HANDLED;
 }
+EXPORT_SYMBOL_GPL(aer_irq);
 
 /**
  * aer_alloc_rpc - allocate Root Port data structure
