@@ -210,44 +210,39 @@ static void setup_rt_frame(int sig, struct k_sigaction *ka, siginfo_t *info,
 	/* Set up to return from userspace. If provided, use a stub
 	 already in userspace. */
 	/* minus 8 is offset to cater for "rtsd r15,8" */
-	if (ka->sa.sa_flags & SA_RESTORER) {
-		regs->r15 = ((unsigned long)ka->sa.sa_restorer)-8;
-	} else {
-		/* addi r12, r0, __NR_sigreturn */
-		err |= __put_user(0x31800000 | __NR_rt_sigreturn ,
-				frame->tramp + 0);
-		/* brki r14, 0x8 */
-		err |= __put_user(0xb9cc0008, frame->tramp + 1);
+	/* addi r12, r0, __NR_sigreturn */
+	err |= __put_user(0x31800000 | __NR_rt_sigreturn ,
+			frame->tramp + 0);
+	/* brki r14, 0x8 */
+	err |= __put_user(0xb9cc0008, frame->tramp + 1);
 
-		/* Return from sighandler will jump to the tramp.
-		 Negative 8 offset because return is rtsd r15, 8 */
-		regs->r15 = ((unsigned long)frame->tramp)-8;
+	/* Return from sighandler will jump to the tramp.
+	 Negative 8 offset because return is rtsd r15, 8 */
+	regs->r15 = ((unsigned long)frame->tramp)-8;
 
-		address = ((unsigned long)frame->tramp);
+	address = ((unsigned long)frame->tramp);
 #ifdef CONFIG_MMU
-		pmdp = pmd_offset(pud_offset(
-				pgd_offset(current->mm, address),
-						address), address);
+	pmdp = pmd_offset(pud_offset(
+			pgd_offset(current->mm, address),
+					address), address);
 
-		preempt_disable();
-		ptep = pte_offset_map(pmdp, address);
-		if (pte_present(*ptep)) {
-			address = (unsigned long) page_address(pte_page(*ptep));
-			/* MS: I need add offset in page */
-			address += ((unsigned long)frame->tramp) & ~PAGE_MASK;
-			/* MS address is virtual */
-			address = virt_to_phys(address);
-			invalidate_icache_range(address, address + 8);
-			flush_dcache_range(address, address + 8);
-		}
-		pte_unmap(ptep);
-		preempt_enable();
-#else
+	preempt_disable();
+	ptep = pte_offset_map(pmdp, address);
+	if (pte_present(*ptep)) {
+		address = (unsigned long) page_address(pte_page(*ptep));
+		/* MS: I need add offset in page */
+		address += ((unsigned long)frame->tramp) & ~PAGE_MASK;
+		/* MS address is virtual */
+		address = virt_to_phys(address);
 		invalidate_icache_range(address, address + 8);
 		flush_dcache_range(address, address + 8);
-#endif
 	}
-
+	pte_unmap(ptep);
+	preempt_enable();
+#else
+	flush_icache_range(address, address + 8);
+	flush_dcache_range(address, address + 8);
+#endif
 	if (err)
 		goto give_sigsegv;
 

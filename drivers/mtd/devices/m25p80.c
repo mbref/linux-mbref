@@ -479,6 +479,7 @@ struct flash_info {
 
 	u16		flags;
 #define	SECT_4K		0x01		/* OPCODE_BE_4K works uniformly */
+#define	SECT_32K	0x02		/* OPCODE_BE_32K */
 };
 
 
@@ -546,6 +547,12 @@ static struct flash_info __devinitdata m25p_data [] = {
 	{ "w25x16", 0xef3015, 0, 64 * 1024, 32, SECT_4K, },
 	{ "w25x32", 0xef3016, 0, 64 * 1024, 64, SECT_4K, },
 	{ "w25x64", 0xef3017, 0, 64 * 1024, 128, SECT_4K, },
+	/* Winbond -- w25q "blocks" are 64K, "sectors" are 32KiB */
+	/* w25q64 supports 4KiB, 32KiB and 64KiB sectors erase size. */
+	/* To support JFFS2, the minimum erase size is 8KiB(>4KiB). */
+	/* And thus, the sector size of w25q64 is set to 32KiB for */
+	/* JFFS2 support. */
+	{ "w25q64", 0xef4017, 0, 64 * 1024, 128, SECT_32K, },
 };
 
 static struct flash_info *__devinit jedec_probe(struct spi_device *spi)
@@ -673,6 +680,9 @@ static int __devinit m25p_probe(struct spi_device *spi)
 	if (info->flags & SECT_4K) {
 		flash->erase_opcode = OPCODE_BE_4K;
 		flash->mtd.erasesize = 4096;
+	} else if (info->flags & SECT_32K) {
+		flash->erase_opcode = OPCODE_BE_32K;
+		flash->mtd.erasesize = 32768;
 	} else {
 		flash->erase_opcode = OPCODE_SE;
 		flash->mtd.erasesize = info->sector_size;
@@ -710,7 +720,11 @@ static int __devinit m25p_probe(struct spi_device *spi)
 		struct mtd_partition	*parts = NULL;
 		int			nr_parts = 0;
 
-		if (mtd_has_cmdlinepart()) {
+#ifdef CONFIG_MTD_OF_PARTS
+		nr_parts = of_mtd_parse_partitions(&spi->dev, spi->dev.archdata.of_node,&parts); 
+#endif
+
+		if (nr_parts <= 0 && mtd_has_cmdlinepart()) {
 			static const char *part_probes[]
 					= { "cmdlinepart", NULL, };
 

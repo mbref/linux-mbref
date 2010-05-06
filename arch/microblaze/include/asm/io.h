@@ -15,9 +15,29 @@
 #include <asm/page.h>
 #include <linux/types.h>
 #include <linux/mm.h>          /* Get struct page {...} */
+#include <asm-generic/iomap.h>
 
+#ifndef CONFIG_PCI
+#define _IO_BASE	0
+#define _ISA_MEM_BASE	0
+#define PCI_DRAM_OFFSET	0
+#else
+#define _IO_BASE	isa_io_base
+#define _ISA_MEM_BASE	isa_mem_base
+#define PCI_DRAM_OFFSET	pci_dram_offset
+#endif
+
+extern unsigned long isa_io_base;
+extern unsigned long pci_io_base;
+extern unsigned long pci_dram_offset;
+
+extern resource_size_t isa_mem_base;
 
 #define IO_SPACE_LIMIT (0xFFFFFFFF)
+
+/* the following is needed to support PCI with some drivers */
+
+#define mmiowb()
 
 static inline unsigned char __raw_readb(const volatile void __iomem *addr)
 {
@@ -118,15 +138,10 @@ static inline void writel(unsigned int v, volatile void __iomem *addr)
 
 #ifdef CONFIG_MMU
 
-#define mm_ptov(addr)		((void *)__phys_to_virt(addr))
-#define mm_vtop(addr)		((unsigned long)__virt_to_phys(addr))
 #define phys_to_virt(addr)	((void *)__phys_to_virt(addr))
 #define virt_to_phys(addr)	((unsigned long)__virt_to_phys(addr))
 #define virt_to_bus(addr)	((unsigned long)__virt_to_phys(addr))
 
-#define __page_address(page) \
-		(PAGE_OFFSET + (((page) - mem_map) << PAGE_SHIFT))
-#define page_to_phys(page)	virt_to_phys((void *)__page_address(page))
 #define page_to_bus(page)	(page_to_phys(page))
 #define bus_to_virt(addr)	(phys_to_virt(addr))
 
@@ -217,7 +232,7 @@ static inline void __iomem *__ioremap(phys_addr_t address, unsigned long size,
  * Little endian
  */
 
-#define out_le32(a, v) __raw_writel(__cpu_to_le32(v), (a));
+#define out_le32(a, v) __raw_writel(__cpu_to_le32(v), (a))
 #define out_le16(a, v) __raw_writew(__cpu_to_le16(v), (a))
 
 #define in_le32(a) __le32_to_cpu(__raw_readl(a))
@@ -227,15 +242,7 @@ static inline void __iomem *__ioremap(phys_addr_t address, unsigned long size,
 #define out_8(a, v) __raw_writeb((v), (a))
 #define in_8(a) __raw_readb(a)
 
-/* FIXME */
-static inline void __iomem *ioport_map(unsigned long port, unsigned int len)
-{
-	return (void __iomem *) (port);
-}
-
-static inline void ioport_unmap(void __iomem *addr)
-{
-	/* Nothing to do */
-}
+#define ioport_map(port, nr)	((void __iomem*)(port))
+#define ioport_unmap(addr)
 
 #endif /* _ASM_MICROBLAZE_IO_H */
