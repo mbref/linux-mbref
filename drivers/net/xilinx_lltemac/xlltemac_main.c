@@ -1318,6 +1318,7 @@ static void free_descriptor_skb(struct net_device *dev);
 static int xenet_change_mtu(struct net_device *dev, int new_mtu)
 {
 	int result;
+	int device_enable = 0;
 #ifdef CONFIG_XILINX_GIGE_VLAN
 	int head_size = XTE_HDR_VLAN_SIZE;
 #else
@@ -1339,7 +1340,10 @@ static int xenet_change_mtu(struct net_device *dev, int new_mtu)
 	dev->mtu = new_mtu;	/* change mtu in net_device structure */
 
 	/* stop driver */
-	xenet_close(dev);
+	if (netif_running(dev)) {
+		device_enable = 1;
+		xenet_close(dev);
+	}
 	/* free all created descriptors for previous size */
 	free_descriptor_skb(dev);
 	/* setup new frame size */
@@ -1352,7 +1356,8 @@ static int xenet_change_mtu(struct net_device *dev, int new_mtu)
 		return -EINVAL;
 	}
 
-	xenet_open(dev); /* open the device */
+	if (device_enable)
+		xenet_open(dev); /* open the device */
 	return 0;
 }
 
@@ -3483,6 +3488,8 @@ static struct net_device_ops xilinx_netdev_ops = {
 	.ndo_change_mtu	= xenet_change_mtu,
 	.ndo_tx_timeout	= xenet_tx_timeout,
 	.ndo_get_stats	= xenet_get_stats,
+	.ndo_set_mac_address	= eth_mac_addr,
+	.ndo_validate_addr	= eth_validate_addr,
 };
 
 static struct of_device_id xtenet_fifo_of_match[] = {
