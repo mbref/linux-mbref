@@ -49,25 +49,18 @@ EXPORT_SYMBOL(__umodsi3);
 extern char *_ebss;
 EXPORT_SYMBOL_GPL(_ebss);
 
+/*
+ * Assembly functions that may be used (directly or indirectly) by modules
+ */
 #ifdef CONFIG_OPT_LIB_ASM
 EXPORT_SYMBOL(memcpy);
 EXPORT_SYMBOL(memmove);
 #endif
 
 EXPORT_SYMBOL(__copy_tofrom_user);
+EXPORT_SYMBOL(__strncpy_user);
 
 #ifdef CONFIG_FUNCTION_TRACER
 extern void _mcount(void);
 EXPORT_SYMBOL(_mcount);
-#endif
-
-/*
- * Assembly functions that may be used (directly or indirectly) by modules
- */
-EXPORT_SYMBOL(__copy_tofrom_user);
-EXPORT_SYMBOL(__strncpy_user);
-
-#ifdef CONFIG_OPT_LIB_ASM
-EXPORT_SYMBOL(memcpy);
-EXPORT_SYMBOL(memmove);
 #endif
