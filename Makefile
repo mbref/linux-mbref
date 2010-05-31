@@ -1013,8 +1013,8 @@ define create-symlink
 endef
 
 include/asm: FORCE
-	$(Q)$(check-symlink)
-	$(Q)$(create-symlink)
+	$(Q)@$(check-symlink)
+	$(Q)@$(create-symlink)
 
 # Generate some files
 # ---------------------------------------------------------------------------
