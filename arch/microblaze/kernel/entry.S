@@ -560,10 +560,8 @@ C_ENTRY(full_exception_trap):
 	nop
 	mts	rfsr, r0;	/* Clear sticky fsr */
 	nop
-	addik	r12, r0, full_exception
-	set_vms;
-	rted	r12, 0;
-	nop;
+	rted	r0, full_exception
+	nop
 
 /*
  * Unaligned data trap.
@@ -597,11 +595,8 @@ C_ENTRY(unaligned_data_trap):
 	nop
 	mfs	r4, rear		/* EAR */
 	nop
+	rtbd	r0, _unaligned_data_exception
 	addik	r7, r1, PTO		/* parameter struct pt_regs * regs */
-	addik	r12, r0, _unaligned_data_exception
-	set_vms;
-	rtbd	r12, 0;	/* interrupts enabled */
-	nop;
 
 /*
  * Page fault traps.
@@ -633,10 +628,8 @@ C_ENTRY(page_fault_data_trap):
 	nop
 	mfs	r7, resr		/* parameter unsigned long error_code */
 	nop
-	addik	r12, r0, do_page_fault
-	set_vms;
-	rted	r12, 0;	/* interrupts enabled */
-	nop;
+	rted	r0, do_page_fault
+	nop
 
 C_ENTRY(page_fault_instr_trap):
 	SAVE_STATE		/* Save registers.*/
@@ -648,11 +641,8 @@ C_ENTRY(page_fault_instr_trap):
 	addik	r5, r1, PTO		/* parameter struct pt_regs * regs */
 	mfs	r6, rear		/* parameter unsigned long address */
 	nop
+	rted	r0, do_page_fault
 	ori	r7, r0, 0		/* parameter unsigned long error_code */
-	addik	r12, r0, do_page_fault
-	set_vms;
-	rted	r12, 0;	/* interrupts enabled */
-	nop;
 
 /* Entry point used to return from an exception.  */
 C_ENTRY(ret_from_exc):
