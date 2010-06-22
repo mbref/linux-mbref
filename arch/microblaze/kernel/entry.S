@@ -826,36 +826,7 @@ IRQ_return: /* MS: Make global symbol for debugging */
  */
 C_ENTRY(_debug_exception):
 	/* BIP bit is set on entry, no interrupts can occur */
-	swi	r1, r0, TOPHYS(PER_CPU(ENTRY_SP))
-
-	mfs	r1, rmsr
-	nop
-	andi	r1, r1, MSR_UMS
-	bnei	r1, 1f
-	/* Kernel-mode state save.  */
-	lwi	r1, r0, TOPHYS(PER_CPU(ENTRY_SP)); /* Reload kernel stack-ptr*/
-	tophys(r1,r1);
-
-	addik	r1, r1, -STATE_SAVE_SIZE; /* Make room on the stack.  */
-	SAVE_REGS;
-
-	swi	r1, r1, PTO + PT_MODE;
-	brid	2f;
-	nop;				/* Fill delay slot */
-1:      /* User-mode state save.  */
-	lwi	r1, r0, TOPHYS(PER_CPU(CURRENT_SAVE)); /* get saved current */
-	tophys(r1,r1);
-	lwi	r1, r1, TS_THREAD_INFO;	/* get the thread info */
-	addik	r1, r1, THREAD_SIZE;	/* calculate kernel stack pointer */
-	tophys(r1,r1);
-
-	addik	r1, r1, -STATE_SAVE_SIZE; /* Make room on the stack.  */
-	SAVE_REGS;
-
-	swi	r0, r1, PTO + PT_MODE; /* Was in user-mode.  */
-	lwi	r11, r0, TOPHYS(PER_CPU(ENTRY_SP));
-	swi	r11, r1, PTO+PT_R1; /* Store user SP.  */
-2:
+	SAVE_STATE
 	tovirt(r1,r1)
 
 	set_vms;
