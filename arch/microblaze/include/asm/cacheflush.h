@@ -17,6 +17,7 @@
 
 /* Somebody depends on this; sigh... */
 #include <linux/mm.h>
+#include <asm/io.h>
 
 /* Look at Documentation/cachetlb.txt */
 
@@ -72,9 +73,14 @@ void microblaze_cache_init(void);
 #define flush_dcache()					mbc->dfl();
 #define flush_dcache_range(start, end)			mbc->dflr(start, end);
 
-#define ARCH_IMPLEMENTS_FLUSH_DCACHE_PAGE 0
-/* D-cache aliasing problem can't happen - cache is between MMU and ram */
-#define flush_dcache_page(page)			do { } while (0)
+/* MS: We have to implement it because of rootfs-jffs2 issue on WB */
+#define flush_dcache_page(page) \
+do { \
+	unsigned long addr = (unsigned long) page_address(page); /* virtual */ \
+	addr = (u32)virt_to_phys((void *)addr); \
+	flush_dcache_range((unsigned) (addr), (unsigned) (addr) + PAGE_SIZE); \
+} while(0);
+
 #define flush_dcache_mmap_lock(mapping)		do { } while (0)
 #define flush_dcache_mmap_unlock(mapping)	do { } while (0)
 
