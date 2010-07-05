@@ -96,12 +96,6 @@ inline unsigned get_romfs_len(unsigned *addr)
 
 unsigned long kernel_tlb;
 
-#if defined(CONFIG_EARLY_PRINTK) && defined(CONFIG_SERIAL_UARTLITE_CONSOLE)
-#define eprintk early_printk
-#else
-#define eprintk printk
-#endif
-
 void __init machine_early_init(const char *cmdline, unsigned int ram,
 		unsigned int fdt, unsigned int msr, unsigned int tlb0,
 		unsigned int tlb1)
