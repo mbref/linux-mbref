@@ -325,7 +325,7 @@ static int ulite_verify_port(struct uart_port *port, struct serial_struct *ser)
 #ifdef CONFIG_CONSOLE_POLL
 static int ulite_get_poll_char(struct uart_port *port)
 {
-	while (!(ioread32be(port->membase + ULITE_STATUS)
+	if (!(ioread32be(port->membase + ULITE_STATUS)
 						& ULITE_STATUS_RXVALID))
 		return NO_POLL_CHAR;
 
