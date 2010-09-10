@@ -31,17 +31,19 @@ static int __devinit of_platform_serial_setup(struct platform_device *ofdev,
 {
 	struct resource resource;
 	struct device_node *np = ofdev->dev.of_node;
-	const unsigned int *clk, *spd;
+	const unsigned int *spd;
+	unsigned int clk;
 	const u32 *prop;
 	int ret, prop_size;
 
 	memset(port, 0, sizeof *port);
 	spd = of_get_property(np, "current-speed", NULL);
-	clk = of_get_property(np, "clock-frequency", NULL);
-	if (!clk) {
+	prop = of_get_property(np, "clock-frequency", NULL);
+	if (!prop) {
 		dev_warn(&ofdev->dev, "no clock-frequency property set\n");
 		return -ENODEV;
 	}
+	clk = be32_to_cpup(prop);
 
 	ret = of_address_to_resource(np, 0, &resource);
 	if (ret) {
@@ -55,23 +57,24 @@ static int __devinit of_platform_serial_setup(struct platform_device *ofdev,
 	/* Check for shifted address mapping */
 	prop = of_get_property(np, "reg-offset", &prop_size);
 	if (prop && (prop_size == sizeof(u32)))
-		port->mapbase += *prop;
+		port->mapbase += be32_to_cpup(prop);
 
 	/* Check for registers offset within the devices address range */
 	prop = of_get_property(np, "reg-shift", &prop_size);
 	if (prop && (prop_size == sizeof(u32)))
-		port->regshift = *prop;
+		port->regshift = be32_to_cpup(prop);
 
 	port->irq = irq_of_parse_and_map(np, 0);
 	port->iotype = UPIO_MEM;
 	port->type = type;
-	port->uartclk = *clk;
+	port->uartclk = clk;
 	port->flags = UPF_SHARE_IRQ | UPF_BOOT_AUTOCONF | UPF_IOREMAP
 		| UPF_FIXED_PORT | UPF_FIXED_TYPE;
 	port->dev = &ofdev->dev;
+
 	/* If current-speed was set, then try not to change it. */
 	if (spd)
-		port->custom_divisor = *clk / (16 * (*spd));
+		port->custom_divisor = clk / (16 * be32_to_cpup(spd));
 
 	return 0;
 }
