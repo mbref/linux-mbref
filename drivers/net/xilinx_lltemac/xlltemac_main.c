@@ -1328,6 +1328,12 @@ static int xenet_change_mtu(struct net_device *dev, int new_mtu)
 	int max_frame = new_mtu + head_size + XTE_TRL_SIZE;
 	int min_frame = 1 + head_size + XTE_TRL_SIZE;
 
+#ifdef CONFIG_PPC
+        if (netif_running(dev)) {
+		printk("STOP device first!!!\n");
+                return -1;
+	}
+#endif
 	if (max_frame < min_frame)
 		return -EINVAL;
 
@@ -3300,6 +3306,7 @@ static int xtenet_setup(
 		if (pdata->dcr_host) {
 			printk("XLlTemac: DCR address: 0x%0x\n", pdata->ll_dev_baseaddress);
 			XLlDma_Initialize(&lp->Dma, pdata->ll_dev_baseaddress);
+			lp->virt_dma_addr = pdata->ll_dev_baseaddress;
 		} else {
 		        virt_baddr = (u32) ioremap(pdata->ll_dev_baseaddress, 4096);
 			lp->virt_dma_addr = virt_baddr;
