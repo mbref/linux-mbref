@@ -432,7 +432,7 @@ xilinxfb_of_probe(struct platform_device *op, const struct of_device_id *match)
 	 * interface and initialize the tft_access accordingly.
 	 */
 	p = (u32 *)of_get_property(op->dev.of_node, "xlnx,dcr-splb-slave-if", NULL);
-	tft_access = p ? *p : 0;
+	tft_access = p ? be32_to_cpup(p) : 0;
 
 	/*
 	 * Fill the resource structure if its direct PLB interface
