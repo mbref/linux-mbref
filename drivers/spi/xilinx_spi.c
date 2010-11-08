@@ -307,6 +307,9 @@ static int __init xilinx_spi_of_probe(struct of_device *ofdev,
 
 	dev_set_drvdata(&ofdev->dev, master);
 
+	/* clear the dma_mask, to try to disable use of dma */
+	ofdev->dev.dma_mask = 0;
+
 	rc = of_address_to_resource(ofdev->node, 0, r_mem);
 	if (rc) {
 		dev_warn(&ofdev->dev, "invalid address\n");
