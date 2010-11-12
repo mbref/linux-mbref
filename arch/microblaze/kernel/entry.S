@@ -282,23 +282,42 @@
  * are masked. This is nice, means we don't have to CLI before state save
  */
 C_ENTRY(_user_exception):
-	addi	r14, r14, 4	/* return address is 4 byte after call */
 	swi	r1, r0, TOPHYS(PER_CPU(ENTRY_SP)) /* save stack */
+	addi	r14, r14, 4	/* return address is 4 byte after call */
 
+	mfs	r1, rmsr
+	nop
+	andi	r1, r1, MSR_UMS
+	bnei	r1, 1f
+
+/* Kernel-mode state save - kernel execve */
+	lwi	r1, r0, TOPHYS(PER_CPU(ENTRY_SP)); /* Reload kernel stack-ptr*/
+	tophys(r1,r1);
+
+	addik	r1, r1, -STATE_SAVE_SIZE; /* Make room on the stack. */
+	SAVE_REGS
+
+	swi	r1, r1, PTO + PT_MODE; /* pt_regs -> kernel mode */
+	brid	2f;
+	nop;				/* Fill delay slot */
+
+/* User-mode state save.  */
+1:
 	lwi	r1, r0, TOPHYS(PER_CPU(CURRENT_SAVE)); /* get saved current */
 	tophys(r1,r1);
 	lwi	r1, r1, TS_THREAD_INFO;	/* get stack from task_struct */
-	/* MS these three instructions can be added to one */
-	/* addik	r1, r1, THREAD_SIZE; */
-	/* tophys(r1,r1); */	
-	/* addik	r1, r1, -STATE_SAVE_SIZE; */
-	addik r1, r1, THREAD_SIZE + CONFIG_KERNEL_BASE_ADDR - CONFIG_KERNEL_START - STATE_SAVE_SIZE;
+/* calculate kernel stack pointer from task struct 8k */
+	addik	r1, r1, THREAD_SIZE;
+	tophys(r1,r1);
+
+	addik	r1, r1, -STATE_SAVE_SIZE; /* Make room on the stack.  */
 	SAVE_REGS
 
+	swi	r0, r1, PTO + PT_MODE;			/* Was in user-mode. */
 	lwi	r11, r0, TOPHYS(PER_CPU(ENTRY_SP));
 	swi	r11, r1, PTO+PT_R1;		/* Store user SP.  */
 	clear_ums;
-	lwi	CURRENT_TASK, r0, TOPHYS(PER_CPU(CURRENT_SAVE));
+2:	lwi	CURRENT_TASK, r0, TOPHYS(PER_CPU(CURRENT_SAVE));
 	/* Save away the syscall number.  */
 	swi	r12, r1, PTO+PT_R0;
 	tovirt(r1,r1)
@@ -367,6 +386,9 @@ C_ENTRY(ret_from_trap):
 	swi	r3, r1, PTO + PT_R3
 	swi	r4, r1, PTO + PT_R4
 
+	lwi	r11, r1, PTO + PT_MODE;
+/* See if returning to kernel mode, if so, skip resched &c.  */
+	bnei	r11, 2f;
 	/* We're returning to user mode, so check for various conditions that
 	 * trigger rescheduling. */
 	/* FIXME: Restructure all these flag checks. */
@@ -409,6 +431,16 @@ C_ENTRY(ret_from_trap):
 	RESTORE_REGS;
 	addik	r1, r1, STATE_SAVE_SIZE		/* Clean up stack space.  */
 	lwi	r1, r1, PT_R1 - PT_SIZE;/* Restore user stack pointer. */
+	bri	6f;
+
+/* Return to kernel state.  */
+2:	set_bip;			/*  Ints masked for state restore */
+	VM_OFF;
+	tophys(r1,r1);
+	RESTORE_REGS;
+	addik	r1, r1, STATE_SAVE_SIZE		/* Clean up stack space.  */
+	tovirt(r1,r1);
+6:
 TRAP_return:		/* Make global symbol for debugging */
 	rtbd	r14, 0;	/* Instructions to return from an IRQ */
 	nop;
@@ -743,40 +775,91 @@ IRQ_return: /* MS: Make global symbol for debugging */
 	nop
 
 /*
- * `Debug' trap
- *  We enter dbtrap in "BIP" (breakpoint) mode.
- *  So we exit the breakpoint mode with an 'rtbd' and proceed with the
- *  original dbtrap.
- *  however, wait to save state first
+ * Debug trap for KGDB. Enter to _debug_exception by brki r16, 0x18
+ * and call handling function with saved pt_regs
  */
 C_ENTRY(_debug_exception):
 	/* BIP bit is set on entry, no interrupts can occur */
-	SAVE_STATE
+	swi	r1, r0, TOPHYS(PER_CPU(ENTRY_SP))
+
+	mfs	r1, rmsr
+	nop
+	andi	r1, r1, MSR_UMS
+	bnei	r1, 1f
+/* MS: Kernel-mode state save - kgdb */
+	lwi	r1, r0, TOPHYS(PER_CPU(ENTRY_SP)); /* Reload kernel stack-ptr*/
+
+	/* BIP bit is set on entry, no interrupts can occur */
+	addik   r1, r1, CONFIG_KERNEL_BASE_ADDR - CONFIG_KERNEL_START - STATE_SAVE_SIZE;
+	SAVE_REGS;
+	/* save all regs to pt_reg structure */
+	swi	r0, r1, PTO+PT_R0;	/* R0 must be saved too */
+	swi	r14, r1, PTO+PT_R14	/* rewrite saved R14 value */
+	swi	r16, r1, PTO+PT_R16
+	swi	r16, r1, PTO+PT_PC; /* PC and r16 are the same */
+	swi	r17, r1, PTO+PT_R17
+	/* save special purpose registers to pt_regs */
+	mfs	r11, rear;
+	swi	r11, r1, PTO+PT_EAR;
+	mfs	r11, resr;
+	swi	r11, r1, PTO+PT_ESR;
+	mfs	r11, rfsr;
+	swi	r11, r1, PTO+PT_FSR;
+
+	/* stack pointer is in physical address at it is decrease
+	 * by STATE_SAVE_SIZE but we need to get correct R1 value */
+	addik   r11, r1, CONFIG_KERNEL_START - CONFIG_KERNEL_BASE_ADDR + STATE_SAVE_SIZE;
+	swi	r11, r1, PTO+PT_R1
+	/* MS: r31 - current pointer isn't changed */
 	tovirt(r1,r1)
+#ifdef CONFIG_KGDB
+	addi	r5, r1, PTO /* pass pt_reg address as the first arg */
+	la	r15, r0, dbtrap_call; /* return address */
+	rtbd	r0, microblaze_kgdb_break
+	nop;
+#endif
+	/* MS: Place handler for brki from kernel space if KGDB is OFF.
+	 * It is very unlikely that another brki instruction is called. */
+	bri 0
 
+/* MS: User-mode state save - gdb */
+1:	lwi	r1, r0, TOPHYS(PER_CPU(CURRENT_SAVE)); /* get saved current */
+	tophys(r1,r1);
+	lwi	r1, r1, TS_THREAD_INFO;	/* get the thread info */
+	addik	r1, r1, THREAD_SIZE;	/* calculate kernel stack pointer */
+	tophys(r1,r1);
+
+	addik	r1, r1, -STATE_SAVE_SIZE; /* Make room on the stack.  */
+	SAVE_REGS;
+	swi	r17, r1, PTO+PT_R17;
+	swi	r16, r1, PTO+PT_R16;
+	swi	r16, r1, PTO+PT_PC;	/* Save LP */
+	swi	r0, r1, PTO + PT_MODE; /* Was in user-mode.  */
+	lwi	r11, r0, TOPHYS(PER_CPU(ENTRY_SP));
+	swi	r11, r1, PTO+PT_R1; /* Store user SP.  */
+	lwi	CURRENT_TASK, r0, TOPHYS(PER_CPU(CURRENT_SAVE));
+	tovirt(r1,r1)
 	set_vms;
-	addi	r5, r0, SIGTRAP		     /* send the trap signal */
-	add	r6, r0, CURRENT_TASK; /* Get current task ptr into r11 */
-	addk	r7, r0, r0		     /* 3rd param zero */
-dbtrap_call:	rtbd	r0, send_sig;
+	addik	r5, r1, PTO;
 	addik	r15, r0, dbtrap_call;
+dbtrap_call: /* Return point for kernel/user entry + 8 because of rtsd r15, 8 */
+	rtbd	r0, sw_exception
+	nop
 
-	set_bip;			/*  Ints masked for state restore*/
+	/* MS: The first instruction for the second part of the gdb/kgdb */
+	set_bip; /* Ints masked for state restore */
 	lwi	r11, r1, PTO + PT_MODE;
 	bnei	r11, 2f;
-
+/* MS: Return to user space - gdb */
 	/* Get current task ptr into r11 */
 	lwi	r11, CURRENT_TASK, TS_THREAD_INFO;	/* get thread info */
 	lwi	r11, r11, TI_FLAGS;	/* get flags in thread info */
 	andi	r11, r11, _TIF_NEED_RESCHED;
 	beqi	r11, 5f;
 
-/* Call the scheduler before returning from a syscall/trap. */
-
+	/* Call the scheduler before returning from a syscall/trap. */
 	bralid	r15, schedule;	/* Call scheduler */
 	nop;				/* delay slot */
-	/* XXX Is PT_DTRACE handling needed here? */
-	/* XXX m68knommu also checks TASK_STATE & TASK_COUNTER here.  */
 
 	/* Maybe handle a signal */
 5:	lwi	r11, CURRENT_TASK, TS_THREAD_INFO;	/* get thread info */
@@ -784,48 +867,38 @@ dbtrap_call:	rtbd	r0, send_sig;
 	andi	r11, r11, _TIF_SIGPENDING;
 	beqi	r11, 1f;		/* Signals to handle, handle them */
 
-/* Handle a signal return; Pending signals should be in r18.  */
-	/* Not all registers are saved by the normal trap/interrupt entry
-	   points (for instance, call-saved registers (because the normal
-	   C-compiler calling sequence in the kernel makes sure they're
-	   preserved), and call-clobbered registers in the case of
-	   traps), but signal handlers may want to examine or change the
-	   complete register state.  Here we save anything not saved by
-	   the normal entry sequence, so that it may be safely restored
-	   (in a possibly modified form) after do_signal returns.  */
-
 	addik	r5, r1, PTO;		/* Arg 1: struct pt_regs *regs */
 	addi  r7, r0, 0;	/* Arg 3: int in_syscall */
 	bralid	r15, do_signal;	/* Handle any signals */
 	add	r6, r0, r0;		/* Arg 2: sigset_t *oldset */
 
-
 /* Finally, return to user state.  */
-1:
-	swi	CURRENT_TASK, r0, PER_CPU(CURRENT_SAVE); /* save current */
+1:	swi	CURRENT_TASK, r0, PER_CPU(CURRENT_SAVE); /* save current */
 	VM_OFF;
 	tophys(r1,r1);
-
+	/* MS: Restore all regs */
 	RESTORE_REGS
-	addik	r1, r1, STATE_SAVE_SIZE		/* Clean up stack space.  */
-
-
-	lwi	r1, r1, PT_R1 - PT_SIZE;
-					/* Restore user stack pointer. */
-	bri	6f;
-
-/* Return to kernel state.  */
-2:	VM_OFF;
-	tophys(r1,r1);
-	RESTORE_REGS
-	addik	r1, r1, STATE_SAVE_SIZE		/* Clean up stack space.  */
-
-	tovirt(r1,r1);
-6:
-DBTRAP_return:		/* Make global symbol for debugging */
-	rtbd	r14, 0;	/* Instructions to return from an IRQ */
+	lwi	r17, r1, PTO+PT_R17;
+	lwi	r16, r1, PTO+PT_R16;
+	addik	r1, r1, STATE_SAVE_SIZE	 /* Clean up stack space */
+	lwi	r1, r1, PT_R1 - PT_SIZE; /* Restore user stack pointer */
+DBTRAP_return_user: /* MS: Make global symbol for debugging */
+	rtbd	r16, 0; /* MS: Instructions to return from a debug trap */
 	nop;
 
+/* MS: Return to kernel state - kgdb */
+2:	VM_OFF;
+	tophys(r1,r1);
+	/* MS: Restore all regs */
+	RESTORE_REGS
+	lwi	r14, r1, PTO+PT_R14;
+	lwi	r16, r1, PTO+PT_PC;
+	lwi	r17, r1, PTO+PT_R17;
+	addik	r1, r1, STATE_SAVE_SIZE; /* MS: Clean up stack space */
+	tovirt(r1,r1);
+DBTRAP_return_kernel: /* MS: Make global symbol for debugging */
+	rtbd	r16, 0; /* MS: Instructions to return from a debug trap */
+	nop;
 
 
 ENTRY(_switch_to)
@@ -915,13 +988,6 @@ ENTRY(_switch_to)
 ENTRY(_reset)
 	brai	0x70; /* Jump back to FS-boot */
 
-ENTRY(_break)
-	mfs	r5, rmsr
-	swi	r5, r0, 0x250 + TOPHYS(r0_ram)
-	mfs	r5, resr
-	swi	r5, r0, 0x254 + TOPHYS(r0_ram)
-	bri	0
-
 	/* These are compiled and loaded into high memory, then
 	 * copied into place in mach_early_setup */
 	.section	.init.ivt, "ax"
@@ -933,11 +999,8 @@ ENTRY(_break)
 	nop
 	brai	TOPHYS(_user_exception); /* syscall handler */
 	brai	TOPHYS(_interrupt);	/* Interrupt handler */
-	brai	TOPHYS(_break);		/* nmi trap handler */
+	brai	TOPHYS(_debug_exception);	/* debug trap handler */
 	brai	TOPHYS(_hw_exception_handler);	/* HW exception handler */
-
-	.org	0x60
-	brai	TOPHYS(_debug_exception);	/* debug trap handler*/
 
 .section .rodata,"a"
 #include "syscall_table.S"
