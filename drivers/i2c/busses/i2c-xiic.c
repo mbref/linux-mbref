@@ -2,6 +2,7 @@
  * i2c-xiic.c
  * Copyright (c) 2002-2007 Xilinx Inc.
  * Copyright (c) 2009-2010 Intel Corporation
+ * Copyright (c) 2010 Li-Pro.Net, Stephan Linz
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -33,7 +34,8 @@
 #include <linux/init.h>
 #include <linux/errno.h>
 #include <linux/delay.h>
-#include <linux/platform_device.h>
+#include <linux/of_platform.h>
+#include <linux/of_i2c.h>
 #include <linux/i2c.h>
 #include <linux/interrupt.h>
 #include <linux/wait.h>
@@ -64,7 +66,10 @@ enum xilinx_i2c_state {
  * @rx_pos:	Position within current RX message
  */
 struct xiic_i2c {
+	struct device		*dev;
 	void __iomem		*base;
+	int			irq;
+	struct resource		res;
 	wait_queue_head_t	wait;
 	struct i2c_adapter	adap;
 	struct i2c_msg		*tx_msg;
@@ -299,8 +304,8 @@ static void xiic_read_rx(struct xiic_i2c *i2c)
 
 	bytes_in_fifo = xiic_getreg8(i2c, XIIC_RFO_REG_OFFSET) + 1;
 
-	dev_dbg(i2c->adap.dev.parent, "%s entry, bytes in fifo: %d, msg: %d"
-		", SR: 0x%x, CR: 0x%x\n",
+	dev_dbg(i2c->dev,
+		"%s entry, bytes in fifo: %d, msg: %d, SR: 0x%x, CR: 0x%x\n",
 		__func__, bytes_in_fifo, xiic_rx_space(i2c),
 		xiic_getreg8(i2c, XIIC_SR_REG_OFFSET),
 		xiic_getreg8(i2c, XIIC_CR_REG_OFFSET));
@@ -330,7 +335,7 @@ static void xiic_fill_tx_fifo(struct xiic_i2c *i2c)
 
 	len = (len > fifo_space) ? fifo_space : len;
 
-	dev_dbg(i2c->adap.dev.parent, "%s entry, len: %d, fifo space: %d\n",
+	dev_dbg(i2c->dev, "%s entry, len: %d, fifo space: %d\n",
 		__func__, len, fifo_space);
 
 	while (len--) {
@@ -338,7 +343,7 @@ static void xiic_fill_tx_fifo(struct xiic_i2c *i2c)
 		if ((xiic_tx_space(i2c) == 0) && (i2c->nmsgs == 1)) {
 			/* last message in transfer -> STOP */
 			data |= XIIC_TX_DYN_STOP_MASK;
-			dev_dbg(i2c->adap.dev.parent, "%s TX STOP\n", __func__);
+			dev_dbg(i2c->dev, "%s TX STOP\n", __func__);
 
 			xiic_setreg16(i2c, XIIC_DTR_REG_OFFSET, data);
 		} else
@@ -369,7 +374,7 @@ static void xiic_process(struct xiic_i2c *i2c)
 	ier = xiic_getreg32(i2c, XIIC_IIER_OFFSET);
 	pend = isr & ier;
 
-	dev_dbg(i2c->adap.dev.parent, "%s entry, IER: 0x%x, ISR: 0x%x, "
+	dev_dbg(i2c->dev, "%s entry, IER: 0x%x, ISR: 0x%x, "
 		"pend: 0x%x, SR: 0x%x, msg: %p, nmsgs: %d\n",
 		__func__, ier, isr, pend, xiic_getreg8(i2c, XIIC_SR_REG_OFFSET),
 		i2c->tx_msg, i2c->nmsgs);
@@ -390,7 +395,7 @@ static void xiic_process(struct xiic_i2c *i2c)
 		 * this is probably a TX error
 		 */
 
-		dev_dbg(i2c->adap.dev.parent, "%s error\n", __func__);
+		dev_dbg(i2c->dev, "%s error\n", __func__);
 
 		/* dynamic mode seem to suffer from problems if we just flushes
 		 * fifos and the next message is a TX with len 0 (only addr)
@@ -406,8 +411,7 @@ static void xiic_process(struct xiic_i2c *i2c)
 
 		clr = XIIC_INTR_RX_FULL_MASK;
 		if (!i2c->rx_msg) {
-			dev_dbg(i2c->adap.dev.parent,
-				"%s unexpexted RX IRQ\n", __func__);
+			dev_dbg(i2c->dev, "%s unexpexted RX IRQ\n", __func__);
 			xiic_clear_rx_fifo(i2c);
 			goto out;
 		}
@@ -420,8 +424,7 @@ static void xiic_process(struct xiic_i2c *i2c)
 			/* also clear TX error if there (RX complete) */
 			clr |= (isr & XIIC_INTR_TX_ERROR_MASK);
 
-			dev_dbg(i2c->adap.dev.parent,
-				"%s end of message, nmsgs: %d\n",
+			dev_dbg(i2c->dev, "%s end of message, nmsgs: %d\n",
 				__func__, i2c->nmsgs);
 
 			/* send next message if this wasn't the last,
@@ -431,7 +434,7 @@ static void xiic_process(struct xiic_i2c *i2c)
 			if (i2c->nmsgs > 1) {
 				i2c->nmsgs--;
 				i2c->tx_msg++;
-				dev_dbg(i2c->adap.dev.parent,
+				dev_dbg(i2c->dev,
 					"%s will start next...\n", __func__);
 
 				__xiic_start_xfer(i2c);
@@ -460,8 +463,7 @@ static void xiic_process(struct xiic_i2c *i2c)
 			(XIIC_INTR_TX_EMPTY_MASK | XIIC_INTR_TX_HALF_MASK);
 
 		if (!i2c->tx_msg) {
-			dev_dbg(i2c->adap.dev.parent,
-				"%s unexpexted TX IRQ\n", __func__);
+			dev_dbg(i2c->dev, "%s unexpexted TX IRQ\n", __func__);
 			goto out;
 		}
 
@@ -469,7 +471,7 @@ static void xiic_process(struct xiic_i2c *i2c)
 
 		/* current message sent and there is space in the fifo */
 		if (!xiic_tx_space(i2c) && xiic_tx_fifo_space(i2c) >= 2) {
-			dev_dbg(i2c->adap.dev.parent,
+			dev_dbg(i2c->dev,
 				"%s end of message sent, nmsgs: %d\n",
 				__func__, i2c->nmsgs);
 			if (i2c->nmsgs > 1) {
@@ -479,7 +481,7 @@ static void xiic_process(struct xiic_i2c *i2c)
 			} else {
 				xiic_irq_dis(i2c, XIIC_INTR_TX_HALF_MASK);
 
-				dev_dbg(i2c->adap.dev.parent,
+				dev_dbg(i2c->dev,
 					"%s Got TX IRQ but no more to do...\n",
 					__func__);
 			}
@@ -490,12 +492,11 @@ static void xiic_process(struct xiic_i2c *i2c)
 			xiic_irq_dis(i2c, XIIC_INTR_TX_HALF_MASK);
 	} else {
 		/* got IRQ which is not acked */
-		dev_err(i2c->adap.dev.parent, "%s Got unexpected IRQ\n",
-			__func__);
+		dev_err(i2c->dev, "%s Got unexpected IRQ\n", __func__);
 		clr = pend;
 	}
 out:
-	dev_dbg(i2c->adap.dev.parent, "%s clr: 0x%x\n", __func__, clr);
+	dev_dbg(i2c->dev, "%s clr: 0x%x\n", __func__, clr);
 
 	xiic_setreg32(i2c, XIIC_IISR_OFFSET, clr);
 }
@@ -571,8 +572,7 @@ static void xiic_start_send(struct xiic_i2c *i2c)
 
 	xiic_irq_clr(i2c, XIIC_INTR_TX_ERROR_MASK);
 
-	dev_dbg(i2c->adap.dev.parent, "%s entry, msg: %p, len: %d, "
-		"ISR: 0x%x, CR: 0x%x\n",
+	dev_dbg(i2c->dev, "%s entry, msg: %p, len: %d, ISR: 0x%x, CR: 0x%x\n",
 		__func__, msg, msg->len, xiic_getreg32(i2c, XIIC_IISR_OFFSET),
 		xiic_getreg8(i2c, XIIC_CR_REG_OFFSET));
 
@@ -602,7 +602,7 @@ static irqreturn_t xiic_isr(int irq, void *dev_id)
 	/* disable interrupts globally */
 	xiic_setreg32(i2c, XIIC_DGIER_OFFSET, 0);
 
-	dev_dbg(i2c->adap.dev.parent, "%s entry\n", __func__);
+	dev_dbg(i2c->dev, "%s entry\n", __func__);
 
 	xiic_process(i2c);
 
@@ -616,7 +616,7 @@ static void __xiic_start_xfer(struct xiic_i2c *i2c)
 {
 	int first = 1;
 	int fifo_space = xiic_tx_fifo_space(i2c);
-	dev_dbg(i2c->adap.dev.parent, "%s entry, msg: %p, fifos space: %d\n",
+	dev_dbg(i2c->dev, "%s entry, msg: %p, fifos space: %d\n",
 		__func__, i2c->tx_msg, fifo_space);
 
 	if (!i2c->tx_msg)
@@ -675,7 +675,7 @@ static int xiic_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
 	struct xiic_i2c *i2c = i2c_get_adapdata(adap);
 	int err;
 
-	dev_dbg(adap->dev.parent, "%s entry SR: 0x%x\n", __func__,
+	dev_dbg(i2c->dev, "%s entry SR: 0x%x\n", __func__,
 		xiic_getreg8(i2c, XIIC_SR_REG_OFFSET));
 
 	err = xiic_busy(i2c);
@@ -716,110 +716,100 @@ static struct i2c_adapter xiic_adapter = {
 };
 
 
-static int __devinit xiic_i2c_probe(struct platform_device *pdev)
+static int __devinit xiic_i2c_probe(struct of_device *op,
+				    const struct of_device_id *match)
 {
 	struct xiic_i2c *i2c;
-	struct xiic_i2c_platform_data *pdata;
-	struct resource *res;
-	int ret, irq;
-	u8 i;
-
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (!res)
-		goto resource_missing;
-
-	irq = platform_get_irq(pdev, 0);
-	if (irq < 0)
-		goto resource_missing;
-
-	pdata = (struct xiic_i2c_platform_data *) pdev->dev.platform_data;
-	if (!pdata)
-		return -EINVAL;
+	int result = 0;
 
 	i2c = kzalloc(sizeof(*i2c), GFP_KERNEL);
 	if (!i2c)
 		return -ENOMEM;
 
-	if (!request_mem_region(res->start, resource_size(res), pdev->name)) {
-		dev_err(&pdev->dev, "Memory region busy\n");
-		ret = -EBUSY;
-		goto request_mem_failed;
-	}
-
-	i2c->base = ioremap(res->start, resource_size(res));
-	if (!i2c->base) {
-		dev_err(&pdev->dev, "Unable to map registers\n");
-		ret = -EIO;
-		goto map_failed;
-	}
-
-	/* hook up driver to tree */
-	platform_set_drvdata(pdev, i2c);
-	i2c->adap = xiic_adapter;
-	i2c_set_adapdata(&i2c->adap, i2c);
-	i2c->adap.dev.parent = &pdev->dev;
-
-	xiic_reinit(i2c);
+	i2c->dev = &op->dev; /* for debug and error output */
 
 	spin_lock_init(&i2c->lock);
 	init_waitqueue_head(&i2c->wait);
-	ret = request_irq(irq, xiic_isr, 0, pdev->name, i2c);
-	if (ret) {
-		dev_err(&pdev->dev, "Cannot claim IRQ\n");
-		goto request_irq_failed;
+
+	result = of_address_to_resource(op->node, 0, &i2c->res);
+	if (result) {
+		dev_err(i2c->dev, "invalid address\n");
+		goto fail_res;
 	}
 
-	/* add i2c adapter to i2c tree */
-	ret = i2c_add_adapter(&i2c->adap);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to add adapter\n");
-		goto add_adapter_failed;
+	if (!request_mem_region(i2c->res.start, resource_size(&i2c->res),
+			DRIVER_NAME)) {
+		dev_err(i2c->dev, "couldn't lock memory region at %p\n",
+				(void *)i2c->res.start);
+		result = -EBUSY;
+		goto fail_res;
 	}
 
-	/* add in known devices to the bus */
-	for (i = 0; i < pdata->num_devices; i++)
-		i2c_new_device(&i2c->adap, pdata->devices + i);
+	i2c->base = ioremap(i2c->res.start, resource_size(&i2c->res));
+	if (!i2c->base) {
+		dev_err(i2c->dev, "failed to map controller\n");
+		result = -ENOMEM;
+		goto fail_map;
+	}
 
-	return 0;
+	i2c->irq = irq_of_parse_and_map(op->node, 0);
+	if (i2c->irq != NO_IRQ) { /* i2c->irq = NO_IRQ implies polling */
+		result = request_irq(i2c->irq, xiic_isr,
+				     IRQF_SHARED, DRIVER_NAME, i2c);
+		if (result < 0) {
+			dev_err(i2c->dev, "failed to attach interrupt\n");
+			goto fail_request;
+		}
+	}
 
-add_adapter_failed:
-	free_irq(irq, i2c);
-request_irq_failed:
-	xiic_deinit(i2c);
+	dev_set_drvdata(&op->dev, i2c);
+
+	i2c->adap = xiic_adapter;
+	i2c_set_adapdata(&i2c->adap, i2c);
+	i2c->adap.dev.parent = &op->dev;
+
+	result = i2c_add_adapter(&i2c->adap);
+	if (result < 0) {
+		dev_err(i2c->dev, "failed to add adapter\n");
+		goto fail_add;
+	}
+
+	dev_info(i2c->dev, "mapped to 0x%08X, irq=%d\n", (unsigned int)i2c->base, i2c->irq);
+
+	xiic_reinit(i2c);
+	of_register_i2c_devices(&i2c->adap, op->node);
+
+	return result;
+
+ fail_add:
+	dev_set_drvdata(&op->dev, NULL);
+	free_irq(i2c->irq, i2c);
+ fail_request:
+	irq_dispose_mapping(i2c->irq);
 	iounmap(i2c->base);
-map_failed:
-	release_mem_region(res->start, resource_size(res));
-request_mem_failed:
+ fail_map:
+	release_mem_region(i2c->res.start, resource_size(&i2c->res));
+ fail_res:
 	kfree(i2c);
-
-	return ret;
-resource_missing:
-	dev_err(&pdev->dev, "IRQ or Memory resource is missing\n");
-	return -ENOENT;
+	return result;
 }
 
-static int __devexit xiic_i2c_remove(struct platform_device* pdev)
+static int __devexit xiic_i2c_remove(struct of_device *op)
 {
-	struct xiic_i2c *i2c = platform_get_drvdata(pdev);
-	struct resource *res;
+	struct xiic_i2c *i2c = dev_get_drvdata(&op->dev);
 
-	/* remove adapter & data */
 	i2c_del_adapter(&i2c->adap);
+	dev_set_drvdata(&op->dev, NULL);
 
 	xiic_deinit(i2c);
 
-	platform_set_drvdata(pdev, NULL);
+	if (i2c->irq != NO_IRQ)
+		free_irq(i2c->irq, i2c);
 
-	free_irq(platform_get_irq(pdev, 0), i2c);
-
+	irq_dispose_mapping(i2c->irq);
 	iounmap(i2c->base);
-
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (res)
-		release_mem_region(res->start, resource_size(res));
-
+	release_mem_region(i2c->res.start, resource_size(&i2c->res));
 	kfree(i2c);
-
 	return 0;
 }
 
@@ -827,23 +817,30 @@ static int __devexit xiic_i2c_remove(struct platform_device* pdev)
 /* work with hotplug and coldplug */
 MODULE_ALIAS("platform:"DRIVER_NAME);
 
-static struct platform_driver xiic_i2c_driver = {
-	.probe   = xiic_i2c_probe,
-	.remove  = __devexit_p(xiic_i2c_remove),
-	.driver  = {
-		.owner = THIS_MODULE,
-		.name = DRIVER_NAME,
+static const struct of_device_id xiic_i2c_of_match[] = {
+	{ .compatible = "xlnx,xps-iic-2.00.a", },
+	{},
+};
+MODULE_DEVICE_TABLE(of, xiic_i2c_of_match);
+
+static struct of_platform_driver xiic_i2c_driver = {
+	.match_table	= xiic_i2c_of_match,
+	.probe		= xiic_i2c_probe,
+	.remove		= __devexit_p(xiic_i2c_remove),
+	.driver		= {
+		.owner	= THIS_MODULE,
+		.name	= DRIVER_NAME,
 	},
 };
 
 static int __init xiic_i2c_init(void)
 {
-	return platform_driver_register(&xiic_i2c_driver);
+	return of_register_platform_driver(&xiic_i2c_driver);
 }
 
 static void __exit xiic_i2c_exit(void)
 {
-	platform_driver_unregister(&xiic_i2c_driver);
+	of_unregister_platform_driver(&xiic_i2c_driver);
 }
 
 module_init(xiic_i2c_init);
