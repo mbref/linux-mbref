@@ -38,7 +38,7 @@ static __devinit int uio_of_genirq_probe(struct of_device *op,
 		if (of_address_to_resource(op->node, i, &resources[i]))
 			break;
 
-	ret = __uio_pdrv_genirq_probe(&op->dev, uioinfo, &resources, i);
+	ret = __uio_pdrv_genirq_probe(&op->dev, uioinfo, resources, i);
 	if (ret)
 		goto err_cleanup;
 
