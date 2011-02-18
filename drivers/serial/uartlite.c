@@ -37,7 +37,7 @@ MODULE_DEVICE_TABLE(of, ulite_of_match);
 #define ULITE_NAME		"ttyUL"
 #define ULITE_MAJOR		204
 #define ULITE_MINOR		187
-#define ULITE_NR_UARTS		4
+#define ULITE_NR_UARTS		8
 
 /* ---------------------------------------------------------------------
  * Register definitions
