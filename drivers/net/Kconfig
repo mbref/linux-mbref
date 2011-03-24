@@ -2559,6 +2559,19 @@ config PCH_GBE
 	  to Gigabit Ethernet.
 	  This driver enables Gigabit Ethernet function.
 
+config S2IMAC
+	tristate "S2I 10/100/1000 GigE Vision Ethernet MAC driver"
+	depends on XILINX_DRIVERS
+	help
+	  This driver supports the 10/100/1000 S2IMAC.
+
+config S2IMAC_POLLING
+	bool "  use in polling mode"
+	depends on S2IMAC
+	help
+	  There is a early MAC implementation without interrupt support. Say
+	  yes here to access this implementation in polling mode.
+
 config XILINX_LLTEMAC
 	tristate "Xilinx LLTEMAC 10/100/1000 Ethernet MAC driver"
 	depends on XILINX_DRIVERS
