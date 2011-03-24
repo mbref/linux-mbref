@@ -2463,6 +2463,18 @@ config S6GMAC
 	  To compile this driver as a module, choose M here. The module
 	  will be called s6gmac.
 
+config S2IMAC
+	tristate "S2I 10/100/1000 GigE Vision Ethernet MAC driver"
+	depends on XILINX_DRIVERS
+	help
+	  This driver supports the 10/100/1000 S2IMAC.
+
+config S2IMAC_POLLING
+	bool "  use in polling mode"
+	depends on S2IMAC
+	help
+	  FIXME
+
 config XILINX_LLTEMAC
 	tristate "Xilinx LLTEMAC 10/100/1000 Ethernet MAC driver"
 	depends on XILINX_DRIVERS

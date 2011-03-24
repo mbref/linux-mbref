@@ -281,5 +281,6 @@ obj-$(CONFIG_WIMAX) += wimax/
 
 obj-$(CONFIG_XILINX_EMACLITE) += xilinx_emaclite.o
 obj-$(CONFIG_XILINX_LLTEMAC) += xilinx_lltemac/
+obj-$(CONFIG_S2IMAC) += s2imac.o
 
 obj-$(CONFIG_NETCONSOLE) += netconsole.o
