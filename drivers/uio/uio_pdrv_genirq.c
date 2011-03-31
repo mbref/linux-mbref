@@ -22,7 +22,6 @@
 #include <linux/stringify.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
-#include <linux/uio_pdrv_genirq.h>
 
 #define DRIVER_NAME "uio_pdrv_genirq"
 
@@ -90,18 +89,29 @@ static int uio_pdrv_genirq_irqcontrol(struct uio_info *dev_info, s32 irq_on)
 	return 0;
 }
 
-int __uio_pdrv_genirq_probe(struct device *dev, struct uio_info *uioinfo,
-		struct resource *resources, unsigned int num_resources)
+static int uio_pdrv_genirq_probe(struct platform_device *pdev)
 {
+	struct uio_info *uioinfo = pdev->dev.platform_data;
 	struct uio_pdrv_genirq_platdata *priv;
 	struct uio_mem *uiomem;
-	unsigned int i;
-	int ret;
+	int ret = -EINVAL;
+	int i;
+
+	if (!uioinfo || !uioinfo->name || !uioinfo->version) {
+		dev_err(&pdev->dev, "missing platform_data\n");
+		goto bad0;
+	}
+
+	if (uioinfo->handler || uioinfo->irqcontrol ||
+	    uioinfo->irq_flags & IRQF_SHARED) {
+		dev_err(&pdev->dev, "interrupt configuration error\n");
+		goto bad0;
+	}
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 	if (!priv) {
 		ret = -ENOMEM;
-		dev_err(dev, "unable to kmalloc\n");
+		dev_err(&pdev->dev, "unable to kmalloc\n");
 		goto bad0;
 	}
 
@@ -112,14 +122,14 @@ int __uio_pdrv_genirq_probe(struct device *dev, struct uio_info *uioinfo,
 
 	uiomem = &uioinfo->mem[0];
 
-	for (i = 0; i < num_resources; ++i) {
-		struct resource *r = resources + i;
+	for (i = 0; i < pdev->num_resources; ++i) {
+		struct resource *r = &pdev->resource[i];
 
 		if (r->flags != IORESOURCE_MEM)
 			continue;
 
 		if (uiomem >= &uioinfo->mem[MAX_UIO_MAPS]) {
-			dev_warn(dev, "device has more than "
+			dev_warn(&pdev->dev, "device has more than "
 					__stringify(MAX_UIO_MAPS)
 					" I/O memory resources.\n");
 			break;
@@ -160,37 +170,17 @@ int __uio_pdrv_genirq_probe(struct device *dev, struct uio_info *uioinfo,
 
 	ret = uio_register_device(&pdev->dev, priv->uioinfo);
 	if (ret) {
-		dev_err(dev, "unable to register uio device\n");
+		dev_err(&pdev->dev, "unable to register uio device\n");
 		goto bad1;
 	}
 
-	dev_set_drvdata(dev, priv);
+	platform_set_drvdata(pdev, priv);
 	return 0;
  bad1:
 	kfree(priv);
 	pm_runtime_disable(&pdev->dev);
  bad0:
 	return ret;
-}
-EXPORT_SYMBOL_GPL(__uio_pdrv_genirq_probe);
-
-static int uio_pdrv_genirq_probe(struct platform_device *pdev)
-{
-	struct uio_info *uioinfo = pdev->dev.platform_data;
-
-	if (!uioinfo || !uioinfo->name || !uioinfo->version) {
-		dev_err(&pdev->dev, "missing platform_data\n");
-		return -EINVAL;
-	}
-
-	if (uioinfo->handler || uioinfo->irqcontrol ||
-	    uioinfo->irq_flags & IRQF_SHARED) {
-		dev_err(&pdev->dev, "interrupt configuration error\n");
-		return -EINVAL;
-	}
-
-	return __uio_pdrv_genirq_probe(&pdev->dev, uioinfo, pdev->resource,
-			pdev->num_resources);
 }
 
 static int uio_pdrv_genirq_remove(struct platform_device *pdev)
