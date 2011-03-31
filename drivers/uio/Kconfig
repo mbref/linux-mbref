@@ -44,12 +44,6 @@ config UIO_PDRV_GENIRQ
 
 	  If you don't know what to do here, say N.
 
-config UIO_OF_GENIRQ
-	tristate "Userspace I/O OF driver with generic IRQ handling"
-	depends on UIO_PDRV_GENIRQ && OF
-	help
-	  OF wrapper for the above platform driver.
-
 config UIO_AEC
 	tristate "AEC video timestamp device"
 	depends on PCI
