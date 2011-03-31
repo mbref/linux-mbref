@@ -23,6 +23,10 @@
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
 
+#include <linux/of.h>
+#include <linux/of_platform.h>
+#include <linux/of_address.h>
+
 #define DRIVER_NAME "uio_pdrv_genirq"
 
 struct uio_pdrv_genirq_platdata {
@@ -96,6 +100,28 @@ static int uio_pdrv_genirq_probe(struct platform_device *pdev)
 	struct uio_mem *uiomem;
 	int ret = -EINVAL;
 	int i;
+
+	if (!uioinfo) {
+		/* alloc uioinfo for one device */
+		uioinfo = kzalloc(sizeof(*uioinfo), GFP_KERNEL);
+		if (!uioinfo) {
+			ret = -ENOMEM;
+			dev_err(&pdev->dev, "unable to kmalloc\n");
+			goto bad2;
+		}
+		uioinfo->name = pdev->dev.of_node->name;
+		uioinfo->version = uioinfo->name; /* FIXME */
+
+		/* Multiple IRQs are not supported */
+		if (pdev->num_resources > 1) {
+			struct resource *r = &pdev->resource[1];
+			uioinfo->irq = r->start;
+			dev_info(&pdev->dev, "irq %d\n", (u32)uioinfo->irq);
+		} else {
+			uioinfo->irq = UIO_IRQ_NONE;
+			dev_info(&pdev->dev, "no IRQ found\n");
+		}
+	}
 
 	if (!uioinfo || !uioinfo->name || !uioinfo->version) {
 		dev_err(&pdev->dev, "missing platform_data\n");
@@ -176,10 +202,15 @@ static int uio_pdrv_genirq_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, priv);
 	return 0;
+
  bad1:
 	kfree(priv);
 	pm_runtime_disable(&pdev->dev);
  bad0:
+	/* kfree uioinfo for CONFIG_OF */
+	if (!pdev->dev.platform_data)
+		kfree(uioinfo);
+ bad2:
 	return ret;
 }
 
@@ -215,6 +246,17 @@ static const struct dev_pm_ops uio_pdrv_genirq_dev_pm_ops = {
 	.runtime_resume = uio_pdrv_genirq_runtime_nop,
 };
 
+#ifdef CONFIG_OF
+/* Match table for of_platform binding */
+static const struct of_device_id __devinitconst uio_of_genirq_match[] = {
+	{ .compatible = "generic-uio", },
+	{ /* end of list */ },
+};
+MODULE_DEVICE_TABLE(of, uio_of_genirq_match);
+#else
+# define uio_of_genirq_match NULL
+#endif
+
 static struct platform_driver uio_pdrv_genirq = {
 	.probe = uio_pdrv_genirq_probe,
 	.remove = uio_pdrv_genirq_remove,
@@ -222,6 +264,7 @@ static struct platform_driver uio_pdrv_genirq = {
 		.name = DRIVER_NAME,
 		.owner = THIS_MODULE,
 		.pm = &uio_pdrv_genirq_dev_pm_ops,
+		.of_match_table = uio_of_genirq_match,
 	},
 };
 
