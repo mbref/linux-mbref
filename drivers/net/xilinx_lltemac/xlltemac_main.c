@@ -492,8 +492,8 @@ static void phy_setup(struct net_local *lp)
 
 	_XLlTemac_PhyRead(&lp->Emac, lp->gmii_addr,
 		NATIONAL_DP83865_STATUS, &RegValue);
-
-#elif CONFIG_XILINX_LLTEMAC_MARVELL_88E1111_RGMII
+#endif
+#ifdef CONFIG_XILINX_LLTEMAC_MARVELL_88E1111_RGMII
 	u16 Register;
 
 	/*
