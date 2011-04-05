@@ -110,7 +110,7 @@ static int uio_pdrv_genirq_probe(struct platform_device *pdev)
 			goto bad2;
 		}
 		uioinfo->name = pdev->dev.of_node->name;
-		uioinfo->version = uioinfo->name; /* FIXME */
+		uioinfo->version = "dt";
 
 		/* Multiple IRQs are not supported */
 		if (pdev->num_resources > 1) {
