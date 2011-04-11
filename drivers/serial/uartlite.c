@@ -626,7 +626,7 @@ ulite_of_probe(struct platform_device *op, const struct of_device_id *match)
 
 	id = of_get_property(op->dev.of_node, "port-number", NULL);
 
-	return ulite_assign(&op->dev, id ? *id : -1, res.start, irq);
+	return ulite_assign(&op->dev, id ? be32_to_cpup(id) : -1, res.start, irq);
 }
 
 static int __devexit ulite_of_remove(struct platform_device *op)
