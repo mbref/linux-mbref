@@ -112,13 +112,22 @@ static int uio_pdrv_genirq_probe(struct platform_device *pdev)
 		uioinfo->name = pdev->dev.of_node->name;
 		uioinfo->version = "dt";
 
-		/* Multiple IRQs are not supported */
-		if (pdev->num_resources > 1) {
-			struct resource *r = &pdev->resource[1];
+		/* Looking for IRQ */
+		uioinfo->irq = UIO_IRQ_NONE;
+		for (i = 0; i < pdev->num_resources; ++i) {
+			struct resource *r = &pdev->resource[i];
+
+			if (r->flags != IORESOURCE_IRQ)
+				continue;
+
 			uioinfo->irq = r->start;
 			dev_info(&pdev->dev, "irq %d\n", (u32)uioinfo->irq);
-		} else {
-			uioinfo->irq = UIO_IRQ_NONE;
+
+			/* Multiple IRQs are not supported */
+			break;
+		}
+
+		if (uioinfo->irq == UIO_IRQ_NONE) {
 			dev_info(&pdev->dev, "no IRQ found\n");
 		}
 	}
@@ -148,6 +157,7 @@ static int uio_pdrv_genirq_probe(struct platform_device *pdev)
 
 	uiomem = &uioinfo->mem[0];
 
+	/* Looking for memory slots */
 	for (i = 0; i < pdev->num_resources; ++i) {
 		struct resource *r = &pdev->resource[i];
 
