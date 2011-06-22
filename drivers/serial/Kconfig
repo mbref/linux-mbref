@@ -919,6 +919,16 @@ config SERIAL_UARTLITE_CONSOLE
 	  console (the system console is the device which receives all kernel
 	  messages and warnings and which allows logins in single user mode).
 
+config SERIAL_UARTLITE_NR_UARTS
+	int "Maximum number of uartlite serial ports"
+	depends on SERIAL_UARTLITE
+	default "4"
+	help
+	  Set this to the number of serial ports you want the driver
+	  to support.  This includes any ports discovered via OPB or
+	  PLB enumeration and any ports that may be added at run-time
+	  via hot-plug (if it is possible).
+
 config SERIAL_SUNCORE
 	bool
 	depends on SPARC
