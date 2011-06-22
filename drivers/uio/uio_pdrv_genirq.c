@@ -267,7 +267,7 @@ MODULE_DEVICE_TABLE(of, uio_of_genirq_match);
 # define uio_of_genirq_match NULL
 #endif
 
-static struct platform_driver uio_pdrv_genirq = {
+static struct platform_driver __refdata uio_pdrv_genirq = {
 	.probe = uio_pdrv_genirq_probe,
 	.remove = uio_pdrv_genirq_remove,
 	.driver = {
