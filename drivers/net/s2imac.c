@@ -11,7 +11,8 @@
  *
  * Copyright (C) 2011 Li-Pro.Net, Stephan Linz <linz@li-pro.net>
  * January 2011 code improvements and coding style corrections
- * February 2001 change over to an interrupt driven network driver
+ * February 2011 change over to an interrupt driven network driver
+ * June 2011 adapt new platform driver model
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -32,6 +33,7 @@
 
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
+#include <linux/of_address.h>
 #include <linux/of_mdio.h>
 #include <linux/phy.h>
 
@@ -138,6 +140,7 @@ struct net_local {
 #define S2IMAC_NETMAP	0
 #define S2IMAC_REGMAP	1
 #define MAX_S2IMAC_MAPS 2
+
 	void __iomem *base_addr[MAX_S2IMAC_MAPS];
 	unsigned int coreclk;
 
@@ -178,10 +181,11 @@ static void s2imac_enable_interrupts(struct net_local *lp)
 	u32 reg_data;
 
 	/* get interrput mask register */
-	reg_data = in_be32((u32 *) INT_MASK);
+	reg_data = in_be32(INT_MASK);
 
 	/* Enable the Tx interrupts, enable Rx interrupts and enable the global interrupt */
-	out_be32 ((u32 *) INT_MASK, reg_data | INT_ENABLE_TX | INT_ENABLE_RX | INT_ENABLE_IRQS);
+	out_be32 (INT_MASK, reg_data | INT_ENABLE_TX | INT_ENABLE_RX | INT_ENABLE_IRQS);
+	reg_data = in_be32(INT_MASK);
 }
 
 /**
@@ -199,7 +203,8 @@ static void s2imac_disable_interrupts(struct net_local *lp)
 	reg_data = in_be32((u32 *) INT_MASK);
 
 	/* disable the Tx interrupts, disable Rx interrupts and disable the global interrupt */
-	out_be32 ((u32 *) INT_MASK, reg_data & (~INT_ENABLE_TX) & (~INT_ENABLE_RX) & (~INT_ENABLE_IRQS));
+//crash	out_be32 ((u32 *) INT_MASK, reg_data & (~INT_ENABLE_TX) & (~INT_ENABLE_RX) & (~INT_ENABLE_IRQS));
+	out_be32 (INT_MASK, 0);
 }
 #endif
 
@@ -1079,7 +1084,7 @@ static struct ethtool_ops ethtool_ops = {
 
 /**
  * s2imac_of_probe - Probe method for the s2imac device.
- * @ofdev:	Pointer to OF device structure
+ * @op:		Pointer to platform device structure.
  * @match:	Pointer to the structure used for matching a device
  *
  * This function probes for the s2imac device in the device tree.
@@ -1089,7 +1094,7 @@ static struct ethtool_ops ethtool_ops = {
  * Return:	0, if the driver is bound to the S2IMAC device, or
  *		a negative error if there is failure.
  */
-static int __devinit s2imac_of_probe (struct of_device *ofdev,
+static int __devinit s2imac_of_probe (struct platform_device *op,
 				      const struct of_device_id *match)
 {
 #ifndef CONFIG_S2IMAC_POLLING
@@ -1098,8 +1103,8 @@ static int __devinit s2imac_of_probe (struct of_device *ofdev,
 	struct resource r_mem;	/* IO mem resources */
 	struct net_device *ndev;
 	struct net_local *lp;
-	struct device_node *np = ofdev->node;
-	struct device *dev = &ofdev->dev;
+	struct device_node *np = op->dev.of_node;
+	struct device *dev = &op->dev;
 	const void *mac_address;
 	const unsigned int *clk;
 	int rc = 0;
@@ -1118,8 +1123,9 @@ static int __devinit s2imac_of_probe (struct of_device *ofdev,
 		return -ENOMEM;
 	}
 
-	dev_set_drvdata (dev, ndev);
-	SET_NETDEV_DEV (ndev, dev);
+	/* TODO: ether_setup(ndev); */
+	dev_set_drvdata(&op->dev, ndev);
+	SET_NETDEV_DEV(ndev, &op->dev);
 
 	lp = netdev_priv (ndev);
 	lp->ndev = ndev;
@@ -1265,7 +1271,7 @@ static int __devinit s2imac_of_probe (struct of_device *ofdev,
 #endif
 
 	ndev->netdev_ops = &s2imac_netdev_ops;
-	ndev->flags &= ~IFF_MULTICAST;
+	ndev->flags &= ~IFF_MULTICAST;  /* clear multicast */
 	ndev->watchdog_timeo = TX_TIMEOUT;
 
 	/* Set ethtool IOCTL handler vectors. */
@@ -1299,7 +1305,7 @@ error3:
 
 /**
  * s2imac_of_remove - Unbind the driver from the s2imac device.
- * @of_dev:	Pointer to OF device structure
+ * @op:		Pointer to the device structure.
  *
  * This function is called if a device is physically removed from the system or
  * if the driver module is being unloaded. It frees any resources allocated to
@@ -1307,10 +1313,9 @@ error3:
  *
  * Return:	0, always.
  */
-static int __devexit s2imac_of_remove (struct of_device *of_dev)
+static int __devexit s2imac_of_remove (struct platform_device *op)
 {
-	struct device *dev = &of_dev->dev;
-	struct net_device *ndev = dev_get_drvdata (dev);
+	struct net_device *ndev = dev_get_drvdata(&op->dev);
 	struct net_local *lp = (struct net_local *)netdev_priv (ndev);
 
 	unregister_netdev (ndev);
@@ -1324,7 +1329,7 @@ static int __devexit s2imac_of_remove (struct of_device *of_dev)
 			    ndev->mem_end - ndev->mem_start + 1);
 
 	s2imac_remove_ndev (ndev);
-	dev_set_drvdata (dev, NULL);
+	dev_set_drvdata(&op->dev, NULL);
 
 	return 0;
 }
@@ -1448,10 +1453,13 @@ static struct of_device_id s2imac_of_match[] __devinitdata = {
 MODULE_DEVICE_TABLE (of, s2imac_of_match);
 
 static struct of_platform_driver s2imac_of_driver = {
-	.name = DRIVER_NAME,
-	.match_table = s2imac_of_match,
 	.probe = s2imac_of_probe,
-	.remove = __devexit_p (s2imac_of_remove),
+	.remove = __devexit_p(s2imac_of_remove),
+	.driver = {
+		 .owner = THIS_MODULE,
+		.name = DRIVER_NAME,
+		.of_match_table = s2imac_of_match,
+	},
 };
 
 /**
