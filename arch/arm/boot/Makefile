@@ -27,7 +27,17 @@ INITRD_PHYS := $(initrd_phys-y)
 
 export ZRELADDR INITRD_PHYS PARAMS_PHYS
 
-targets := Image zImage xipImage bootpImage uImage
+#targets := Image zImage xipImage bootpImage uImage simpleImage.%
+targets := zImage Image xipImage bootpImage uImage zImage% uImage.% dtbImage% simpleImage.%
+
+# Where the DTS files live
+dtstree         := $(srctree)/$(src)/dts
+
+# Rule to build device tree blobs
+DTC = $(objtree)/scripts/dtc/dtc
+
+# Rule to build device tree blobs
+DTC_FLAGS := -p 1024
 
 ifeq ($(CONFIG_XIP_KERNEL),y)
 
@@ -54,6 +64,44 @@ $(obj)/compressed/vmlinux: $(obj)/Image FORCE
 	$(Q)$(MAKE) $(build)=$(obj)/compressed $@
 
 $(obj)/zImage:	$(obj)/compressed/vmlinux FORCE
+	@echo "...........................zImage.........................................."
+	$(call if_changed,objcopy)
+	@echo '  Kernel: $@ is ready'
+
+$(obj)/simpleImage.%: vmlinux FORCE
+	@echo "...........................simpleImage.........................................."
+	# hack strip and cp as image.elf
+	$(STRIP) vmlinux -o $(BOOTDIR)/$(@F).elf
+
+	# Binary is the Image
+	$(OBJCOPY) -O binary vmlinux  $(BOOTDIR)/$(@F).bin
+	gzip --best --force $(BOOTDIR)/$(@F).bin
+	$(OBJCOPY) -O binary -S vmlinux  $(BOOTDIR)/$(@F).stripped.bin
+
+	# hack to create system.dtb FIXME
+	@echo "...........................DTC.........................................."
+	$(DTC) -O dtb -o $(obj)/system.dtb -b 0 $(DTS_FLAGS) -p 1024 $(dtstree)/$*.dts
+	@echo 'Kernel: $@ is ready' ' (#'`cat .version`')'
+	@echo "...........................simpleImage done.........................................."
+
+	@echo "..........................FIT image ..................................."
+	rm -f "$*.fit"
+
+	#[ "$vmz" != vmlinux.bin.gz ] && mv "$vmz" "vmlinux.bin.gz"
+	cp "$(obj)/$(@F).bin.gz" "vmlinux.bin.gz"
+	cp "$(obj)/system.dtb" "target.dtb"
+	cp $(obj)/kernel_fdt.its .
+	mkimage -f kernel_fdt.its "image.fit"
+	rm kernel_fdt.its vmlinux.bin.gz
+	@echo "..........................FIT image done..................................."
+
+$(obj)/simpleImage:	vmlinux FORCE
+	$(error "................ simpleImage")
+	$(call if_changed,objcopy)
+	@echo 'Kernel: $@ is ready' ' (#'`cat .version`')'
+
+$(obj)/zImage.%: $(obj)/compressed/vmlinux FORCE
+	@echo "...........................zImage.%.........................................."
 	$(call if_changed,objcopy)
 	@echo '  Kernel: $@ is ready'
 
@@ -73,6 +121,12 @@ endif
 $(obj)/uImage: STARTADDR=$(LOADADDR)
 
 $(obj)/uImage:	$(obj)/zImage FORCE
+	@echo "...........................uImage.........................................."
+	$(call if_changed,uimage)
+	@echo '  Image $@ is ready'
+
+$(obj)/uImage.%: $(obj)/zImage FORCE
+	@echo "...........................uImage.%.........................................."
 	$(call if_changed,uimage)
 	@echo '  Image $@ is ready'
 
@@ -112,3 +166,5 @@ i:
 	$(obj)/Image System.map "$(INSTALL_PATH)"
 
 subdir-	    := bootp compressed
+
+clean-files += *.dtb simpleImage.* linux.bin.ub
