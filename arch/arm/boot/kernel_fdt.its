@@ -8,11 +8,11 @@
 	images {
 		kernel@1 {
 			description = "PetaLinux Arm kernel";
-			data = /incbin/("./vmlinux.bin.gz");
+			data = /incbin/("./vmlinux.bin");
 			type = "kernel";
 			arch = "arm";
 			os = "linux";
-			compression = "gzip";
+			compression = "none";
 			load = <00008000>;
 			entry = <00008000>;
 /*

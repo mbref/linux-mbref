@@ -75,7 +75,7 @@ $(obj)/simpleImage.%: vmlinux FORCE
 
 	# Binary is the Image
 	$(OBJCOPY) -O binary vmlinux  $(BOOTDIR)/$(@F).bin
-	gzip --best --force $(BOOTDIR)/$(@F).bin
+	gzip --best --force -c $(BOOTDIR)/$(@F).bin > $(BOOTDIR)/$(@F).bin.gz
 	$(OBJCOPY) -O binary -S vmlinux  $(BOOTDIR)/$(@F).stripped.bin
 
 	# hack to create system.dtb FIXME
@@ -89,10 +89,11 @@ $(obj)/simpleImage.%: vmlinux FORCE
 
 	#[ "$vmz" != vmlinux.bin.gz ] && mv "$vmz" "vmlinux.bin.gz"
 	cp "$(obj)/$(@F).bin.gz" "vmlinux.bin.gz"
+	cp "$(obj)/$(@F).bin" "vmlinux.bin"
 	cp "$(obj)/system.dtb" "target.dtb"
 	cp $(obj)/kernel_fdt.its .
 	mkimage -f kernel_fdt.its "image.fit"
-	rm kernel_fdt.its vmlinux.bin.gz
+	rm kernel_fdt.its vmlinux.bin* target.dtb
 	@echo "..........................FIT image done..................................."
 
 $(obj)/simpleImage:	vmlinux FORCE
