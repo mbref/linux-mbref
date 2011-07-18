@@ -90,6 +90,7 @@ $(obj)/simpleImage.%: vmlinux FORCE
 	#[ "$vmz" != vmlinux.bin.gz ] && mv "$vmz" "vmlinux.bin.gz"
 	cp "$(obj)/$(@F).bin.gz" "vmlinux.bin.gz"
 	cp "$(obj)/$(@F).bin" "vmlinux.bin"
+	cp "$(obj)/$(@F).bin" "linux.bin"
 	cp "$(obj)/system.dtb" "target.dtb"
 	cp $(obj)/kernel_fdt.its .
 	mkimage -f kernel_fdt.its "image.fit"
