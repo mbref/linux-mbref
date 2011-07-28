@@ -28,7 +28,7 @@
 #endif
 
 OUTPUT_ARCH(arm)
-ENTRY(stext)
+ENTRY(arm_start)
 
 #ifndef __ARMEB__
 jiffies = jiffies_64;
@@ -40,11 +40,12 @@ SECTIONS
 {
 #ifdef CONFIG_XIP_KERNEL
 	. = XIP_VIRT_ADDR(CONFIG_XIP_PHYS_ADDR);
+	arm_start = . ;
 #else
 	. = PAGE_OFFSET + TEXT_OFFSET;
+	arm_start = . - PAGE_OFFSET;
 #endif
-
-	.init : {			/* Init code and data		*/
+	.init : AT(ADDR(.init) - LOAD_OFFSET) {	/* Init code and data	*/
 		_stext = .;
 		_sinittext = .;
 			HEAD_TEXT
@@ -108,7 +109,7 @@ SECTIONS
 #endif
 	}
 
-	.text : {			/* Real text segment		*/
+	.text : AT(ADDR(.text) - LOAD_OFFSET){	/* Real text segment	*/
 		_text = .;		/* Text and read-only data	*/
 			__exception_text_start = .;
 			*(.exception.text)
@@ -138,12 +139,12 @@ SECTIONS
 	 * Stack unwinding tables
 	 */
 	. = ALIGN(8);
-	.ARM.unwind_idx : {
+	.ARM.unwind_idx : AT(ADDR(.ARM.unwind_idx) - LOAD_OFFSET) {
 		__start_unwind_idx = .;
 		*(.ARM.exidx*)
 		__stop_unwind_idx = .;
 	}
-	.ARM.unwind_tab : {
+	.ARM.unwind_tab : AT(ADDR(.ARM.unwind_tab) - LOAD_OFFSET) {
 		__start_unwind_tab = .;
 		*(.ARM.extab*)
 		__stop_unwind_tab = .;
@@ -160,7 +161,7 @@ SECTIONS
 	__data_loc = .;
 #endif
 
-	.data : AT(__data_loc) {
+	.data : AT(ADDR(.data) - LOAD_OFFSET) {
 		_data = .;		/* address in memory */
 		_sdata = .;
 
