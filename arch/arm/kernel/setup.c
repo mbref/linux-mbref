@@ -793,6 +793,7 @@ static struct machine_desc * __init setup_machine_tags(unsigned int nr)
 
 	init_tags.mem.start = PHYS_OFFSET;
 
+	nr = 0xd32; // need to fix in QEMU and EP board
 	/*
 	 * locate machine in the list of supported machines.
 	 */
