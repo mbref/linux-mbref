@@ -50,7 +50,10 @@
 #include <linux/vmalloc.h>
 #include <linux/version.h>
 #include <linux/of.h>
-#include <mach/board.h>
+
+#ifndef CONFIG_OF
+# include <mach/board.h>
+#endif
 
 #include <linux/clocksource.h>
 #include <linux/timecompare.h>
