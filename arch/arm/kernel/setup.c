@@ -872,6 +872,10 @@ static struct machine_desc * __init setup_machine_tags(unsigned int nr)
 void __init setup_arch(char **cmdline_p)
 {
 	struct machine_desc *mdesc;
+#ifdef CONFIG_ARCH_ZYNQ
+	extern u32 _fdt_start[];
+	__atags_pointer = virt_to_phys(_fdt_start);
+#endif
 
 	unwind_init();
 

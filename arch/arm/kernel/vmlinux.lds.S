@@ -3,11 +3,11 @@
  * Written by Martin Mares <mj@atrey.karlin.mff.cuni.cz>
  */
 
+#include <asm/page.h> /* for LOAD_ADDRESS */
 #include <asm-generic/vmlinux.lds.h>
 #include <asm/thread_info.h>
 #include <asm/memory.h>
-#include <asm/page.h>
-	
+
 #define PROC_INFO							\
 	VMLINUX_SYMBOL(__proc_info_begin) = .;				\
 	*(.proc.info.init)						\
@@ -82,6 +82,16 @@ SECTIONS
 		ARM_EXIT_KEEP(EXIT_DATA)
 #endif
 	}
+
+#ifdef CONFIG_ARCH_ZYNQ
+	. = ALIGN (4) ;
+	__fdt_blob : AT(ADDR(__fdt_blob) - LOAD_OFFSET) {
+		_fdt_start = . ;		/* place for fdt blob */
+		*(__fdt_blob) ;			/* Any link-placed DTB */
+	        . = _fdt_start + 0x4000;	/* Pad up to 16kbyte */
+		_fdt_end = . ;
+	}
+#endif
 
 	PERCPU(32, PAGE_SIZE)
 
