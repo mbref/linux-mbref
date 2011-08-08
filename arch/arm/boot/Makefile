@@ -110,7 +110,7 @@ $(obj)/simpleImage.%: vmlinux FORCE
 	cp "$(obj)/$(@F).bin" "linux.bin"
 	cp "$(obj)/system.dtb" "target.dtb"
 	cp $(obj)/kernel_fdt.its .
-	mkimage -f kernel_fdt.its "image.fit"
+	mkimage -f kernel_fdt.its $(BOOTDIR)/$(@F).fit
 	rm kernel_fdt.its vmlinux.bin* target.dtb
 	@echo "..........................FIT image done..................................."
 
