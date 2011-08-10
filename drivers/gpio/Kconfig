@@ -95,7 +95,7 @@ config GPIO_XILINX
 
 config GPIO_XILINX_PS
 	tristate "Xilinx GPIO PS"
-	depends on ARCH_XILINX
+	depends on ARCH_XILINX || ARCH_ZYNQ
 	help
 	  Say yes here to support Xilinx GPIO PS controller
 
