@@ -911,6 +911,7 @@ config ARCH_ZYNQ
 	select CLKDEV_LOOKUP
 	select ARM_GIC
 	select ARM_AMBA
+	select ARCH_REQUIRE_GPIOLIB
 	select ICST
 	select USE_OF
 	help
