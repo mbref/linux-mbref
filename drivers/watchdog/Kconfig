@@ -304,7 +304,7 @@ config ADX_WATCHDOG
 
 config XILINX_PS_WATCHDOG
 	tristate "Xilinx PS Watchdog Timer"
-	depends on ARCH_XILINX
+	depends on ARCH_XILINX || ARCH_ZYNQ
 	help
 	  Say Y here if you want to include support for the watchdog
 	  timer in the Xilinx PS.
