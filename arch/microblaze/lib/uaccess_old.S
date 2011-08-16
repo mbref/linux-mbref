@@ -166,7 +166,7 @@ __copy_tofrom_user:
 	beqid	r7, 0f /* zero size is not likely */
 	or	r3, r5, r6 /* find if is any to/from unaligned */
 	or	r3, r3, r7 /* find if count is unaligned */
-	andi	r3, r7, 0x3 /* mask last 3 bits */
+	andi	r3, r3, 0x3 /* mask last 3 bits */
 	bneid	r3, bu1 /* if r3 is not zero then byte copying */
 	or	r3, r0, r0
 
