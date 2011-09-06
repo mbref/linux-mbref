@@ -50,6 +50,7 @@
 #include <linux/vmalloc.h>
 #include <linux/version.h>
 #include <linux/of.h>
+#include <linux/of_net.h>
 
 #ifndef CONFIG_OF
 # include <mach/board.h>
@@ -897,6 +898,13 @@ static void __init xemacps_update_hwaddr(struct net_local *lp)
 	u16 regvalh;
 	u8  addr[6];
 
+#ifdef CONFIG_OF
+	const void *mac_addr;
+	mac_addr = of_get_mac_address(lp->pdev->dev.of_node);
+
+	if (mac_addr)
+		memcpy(addr, mac_addr, 6);
+#else
 	regvall = xemacps_read(lp->baseaddr, XEMACPS_LADDR1L_OFFSET);
 	regvalh = xemacps_read(lp->baseaddr, XEMACPS_LADDR1H_OFFSET);
 	addr[0] = regvall & 0xFF;
@@ -905,6 +913,7 @@ static void __init xemacps_update_hwaddr(struct net_local *lp)
 	addr[3] = (regvall >> 24) & 0xFF;
 	addr[4] = regvalh & 0xFF;
 	addr[5] = (regvalh >> 8) & 0xFF;
+#endif
 #ifdef DEBUG
 	printk(KERN_INFO "GEM: MAC addr %02x:%02x:%02x:%02x:%02x:%02x\n",
 		addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
