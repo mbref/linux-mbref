@@ -56,6 +56,10 @@ dtstree         := $(srctree)/$(src)/dts
 # Rule to build device tree blobs
 DTC = $(objtree)/scripts/dtc/dtc
 
+quiet_cmd_strip = STRIP   $@.elf
+	cmd_strip = $(STRIP) -K arm_start -K _end -K __log_buf \
+				-K _fdt_start vmlinux -o $@.elf
+
 ifeq ($(CONFIG_XIP_KERNEL),y)
 
 $(obj)/xipImage: vmlinux FORCE
@@ -81,46 +85,15 @@ $(obj)/compressed/vmlinux: $(obj)/Image FORCE
 	$(Q)$(MAKE) $(build)=$(obj)/compressed $@
 
 $(obj)/zImage:	$(obj)/compressed/vmlinux FORCE
-	@echo "...........................zImage.........................................."
 	$(call if_changed,objcopy)
 	@echo '  Kernel: $@ is ready'
 
 $(obj)/simpleImage.%: vmlinux FORCE
-	@echo "...........................simpleImage.........................................."
-	# hack strip and cp as image.elf
-	$(STRIP) vmlinux -o $(BOOTDIR)/$(@F).elf
-
-	# Binary is the Image
-	$(OBJCOPY) -O binary vmlinux  $(BOOTDIR)/$(@F).bin
-	gzip --best --force -c $(BOOTDIR)/$(@F).bin > $(BOOTDIR)/$(@F).bin.gz
-	$(OBJCOPY) -O binary -S vmlinux  $(BOOTDIR)/$(@F).stripped.bin
-
-	# hack to create system.dtb FIXME
-	@echo "...........................DTC.........................................."
-	$(DTC) -O dtb -o $(obj)/system.dtb -b 0 $(DTS_FLAGS) -p 1024 $(dtstree)/$*.dts
-	@echo 'Kernel: $@ is ready' ' (#'`cat .version`')'
-	@echo "...........................simpleImage done.........................................."
-
-	@echo "..........................FIT image ..................................."
-	rm -f "$*.fit"
-
-	#[ "$vmz" != vmlinux.bin.gz ] && mv "$vmz" "vmlinux.bin.gz"
-	cp "$(obj)/$(@F).bin.gz" "vmlinux.bin.gz"
-	cp "$(obj)/$(@F).bin" "vmlinux.bin"
-	cp "$(obj)/$(@F).bin" "linux.bin"
-	cp "$(obj)/system.dtb" "target.dtb"
-	cp $(obj)/kernel_fdt.its .
-	mkimage -f kernel_fdt.its $(BOOTDIR)/$(@F).fit
-	rm kernel_fdt.its vmlinux.bin* target.dtb
-	@echo "..........................FIT image done..................................."
-
-$(obj)/simpleImage:	vmlinux FORCE
-	$(error "................ simpleImage")
+	$(call if_changed,strip)
 	$(call if_changed,objcopy)
 	@echo 'Kernel: $@ is ready' ' (#'`cat .version`')'
 
 $(obj)/zImage.%: $(obj)/compressed/vmlinux FORCE
-	@echo "...........................zImage.%.........................................."
 	$(call if_changed,objcopy)
 	@echo '  Kernel: $@ is ready'
 
@@ -140,12 +113,10 @@ endif
 $(obj)/uImage: STARTADDR=$(LOADADDR)
 
 $(obj)/uImage:	$(obj)/zImage FORCE
-	@echo "...........................uImage.........................................."
 	$(call if_changed,uimage)
 	@echo '  Image $@ is ready'
 
 $(obj)/uImage.%: $(obj)/zImage FORCE
-	@echo "...........................uImage.%.........................................."
 	$(call if_changed,uimage)
 	@echo '  Image $@ is ready'
 
