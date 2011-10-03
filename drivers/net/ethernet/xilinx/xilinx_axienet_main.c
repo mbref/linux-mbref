@@ -26,10 +26,17 @@
 #include <linux/of_mdio.h>
 #include <linux/of_platform.h>
 #include <linux/of_address.h>
+#include <linux/of.h>
+#include <linux/of_device.h>
+#include <linux/of_mdio.h>
+#include <linux/of_platform.h>
+#include <linux/of_address.h>
 #include <linux/skbuff.h>
 #include <linux/spinlock.h>
 #include <linux/phy.h>
 #include <linux/mii.h>
+#include <linux/dma-mapping.h>
+#include <linux/io.h>
 
 #include "xilinx_axienet.h"
 
@@ -1806,7 +1813,7 @@ static void axienet_dma_err_handler(unsigned long data)
  * axienet_local. It registers the Ethernet device.
  **/
 static int __init
-axienet_of_probe(struct platform_device *op, const struct of_device_id *match)
+axienet_of_probe(struct platform_device *op)
 {
 	struct device_node *np;
 	struct axienet_local *lp;
@@ -1997,7 +2004,7 @@ static int __devexit axienet_of_remove(struct platform_device *op)
 	return 0;
 }
 
-static struct of_platform_driver axienet_of_driver = {
+static struct platform_driver axienet_of_driver = {
 	.probe = axienet_of_probe,
 	.remove = __devexit_p(axienet_of_remove),
 	.driver = {
@@ -2015,7 +2022,7 @@ static struct of_platform_driver axienet_of_driver = {
  **/
 static int __init axienet_init(void)
 {
-	return of_register_platform_driver(&axienet_of_driver);
+	return platform_driver_register(&axienet_of_driver);
 }
 
 module_init(axienet_init);
@@ -2028,7 +2035,7 @@ module_init(axienet_init);
  **/
 static void __exit axienet_exit(void)
 {
-	of_unregister_platform_driver(&axienet_of_driver);
+	platform_driver_unregister(&axienet_of_driver);
 }
 module_exit(axienet_exit);
 
