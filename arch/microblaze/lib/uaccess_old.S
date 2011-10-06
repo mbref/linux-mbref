@@ -167,29 +167,29 @@ __copy_tofrom_user:
 	or	r3, r5, r6 /* find if is any to/from unaligned */
 	or	r3, r3, r7 /* find if count is unaligned */
 	andi	r3, r3, 0x3 /* mask last 3 bits */
-	bneid	r3, bu1 /* if r3 is not zero then byte copying */
+	bneid	r3, char_loop /* if r3 is not zero then byte copying */
 	or	r3, r0, r0
 
 	rsubi	r3, r7, PAGE_SIZE /* detect PAGE_SIZE */
-	beqid	r3, page;
+	beqid	r3, page_loop;
 	or	r3, r0, r0
 
-w1:	lw	r4, r6, r3 /* at least one 4 byte copy */
-w2:	sw	r4, r5, r3
+17:	lw	r4, r6, r3 /* at least one 4 byte copy */
+18:	sw	r4, r5, r3
 	addik	r7, r7, -4
-	bneid	r7, w1
+	bneid	r7, 17b
 	addik	r3, r3, 4
 	addik	r3, r7, 0
 	rtsd	r15, 8
 	nop
 
 	.section	__ex_table,"a"
-	.word	w1, 0f;
-	.word	w2, 0f;
+	.word	17b, 0f;
+	.word	18b, 0f;
 	.text
 
 .align 4 /* Alignment is important to keep icache happy */
-page:	/* Create room on stack and save registers for storign values */
+page_loop:	/* Create room on stack and save registers for storign values */
 	addik   r1, r1, -32
 	swi	r19, r1, 4
 	swi	r20, r1, 8
@@ -198,7 +198,7 @@ page:	/* Create room on stack and save registers for storign values */
 	swi	r23, r1, 20
 	swi	r24, r1, 24
 	swi	r25, r1, 28
-loop:	/* r4, r19, r20, r21, r22, r23, r24, r25 are used for storing values */
+20:	/* r4, r19, r20, r21, r22, r23, r24, r25 are used for storing values */
 	/* Loop unrolling to get performance boost */
 	COPY_80(0x000);
 	COPY_80(0x080);
@@ -207,7 +207,7 @@ loop:	/* r4, r19, r20, r21, r22, r23, r24, r25 are used for storing values */
 	/* copy loop */
 	addik	r6, r6, 0x200
 	addik	r7, r7, -0x200
-	bneid	r7, loop
+	bneid	r7, 20b
 	addik	r5, r5, 0x200
 	/* Restore register content */
 	lwi	r19, r1, 4
@@ -224,10 +224,10 @@ loop:	/* r4, r19, r20, r21, r22, r23, r24, r25 are used for storing values */
 	nop
 
 .align 4 /* Alignment is important to keep icache happy */
-bu1:	lbu	r4,r6,r3
-bu2:	sb	r4,r5,r3
+char_loop:	lbu	r4,r6,r3
+22:	sb	r4,r5,r3
 	addik	r7,r7,-1
-	bneid	r7,bu1
+	bneid	r7,char_loop
 	addik	r3,r3,1		/* delay slot */
 0:
 	addik	r3,r7,0
@@ -236,6 +236,6 @@ bu2:	sb	r4,r5,r3
 	.size   __copy_tofrom_user, . - __copy_tofrom_user
 
 	.section	__ex_table,"a"
-	.word	bu1, 0b;
-	.word	bu2, 0b;
+	.word	char_loop, 0b;
+	.word	22b, 0b;
 	.text
