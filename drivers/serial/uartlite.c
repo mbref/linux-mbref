@@ -623,6 +623,9 @@ ulite_of_probe(struct platform_device *op, const struct of_device_id *match)
 	}
 
 	irq = irq_of_parse_and_map(op->dev.of_node, 0);
+	if (irq == -1) {
+		return -ENODEV;
+	}
 
 	id = of_get_property(op->dev.of_node, "port-number", NULL);
 
