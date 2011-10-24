@@ -730,6 +730,7 @@ static int __devinit xspips_probe(struct platform_device *dev)
 		dev_err(&dev->dev, "couldn't determine speed-hz\n");
 		goto free_irq;
 	}
+	master->dev.of_node = dev->dev.of_node;
 #else
 	xspi->input_clk_hz = platform_info->speed_hz;
 	xspi->speed_hz = platform_info->speed_hz / 2;
