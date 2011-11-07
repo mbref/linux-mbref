@@ -288,7 +288,7 @@ void __init time_init(void)
 	selfmod_function((int *) arr_func, timer_baseaddr);
 #endif
 	printk(KERN_INFO "%s #0 at 0x%08x, irq=%d\n",
-		timer_list[i], timer_baseaddr, irq);
+		timer->name, timer_baseaddr, irq);
 
 	/* If there is clock-frequency property than use it */
 	prop = of_get_property(timer, "clock-frequency", NULL);

@@ -154,7 +154,7 @@ void __init init_IRQ(void)
 	selfmod_function((int *) arr_func, intc_baseaddr);
 #endif
 	printk(KERN_INFO "%s #0 at 0x%08x, num_irq=%d, edge=0x%x\n",
-		intc_list[j], intc_baseaddr, nr_irq, intr_type);
+		intc->name, intc_baseaddr, nr_irq, intr_type);
 
 	/*
 	 * Disable all external interrupts until they are
