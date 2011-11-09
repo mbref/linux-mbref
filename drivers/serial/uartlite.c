@@ -611,8 +611,7 @@ static int __devinit
 ulite_of_probe(struct platform_device *op, const struct of_device_id *match)
 {
 	struct resource res;
-	const unsigned int *idp;
-	int id;
+	const unsigned int *id;
 	int irq, rc;
 
 	dev_dbg(&op->dev, "%s(%p, %p)\n", __func__, op, match);
@@ -628,20 +627,9 @@ ulite_of_probe(struct platform_device *op, const struct of_device_id *match)
 		return -ENODEV;
 	}
 
-	/* Look for a serialN alias */
-	id = of_alias_get_id(op->dev.of_node, "serial");
-	if(id < 0) {
-		dev_warn(&op->dev, "failed to get alias id, errno %d\n",id);
-		/* Fall back to old port-number property */
-		idp = of_get_property(op->dev.of_node, "port-number", NULL);
-		if(idp < 0) {
-			dev_warn(&op->dev, "failed to get port-number, errno %d\n",idp);
-			id=-1;
-		} else
-			id = be32_to_cpup(idp);
-	}
-			
-	return ulite_assign(&op->dev, id , res.start, irq);
+	id = of_get_property(op->dev.of_node, "port-number", NULL);
+
+	return ulite_assign(&op->dev, id ? be32_to_cpup(id) : -1, res.start, irq);
 }
 
 static int __devexit ulite_of_remove(struct platform_device *op)
