@@ -212,7 +212,7 @@ extern int of_parse_phandles_with_args(struct device_node *np,
 	const char *list_name, const char *cells_name, int index,
 	struct device_node **out_node, const void **out_args);
 
-extern void of_alias_scan(void * (*dt_alloc)(u64 size, u64 align));
+extern void of_alias_scan(u64 (*dt_alloc)(u64 size, u64 align));
 extern int of_alias_get_id(struct device_node *np, const char *stem);
 
 extern int of_machine_is_compatible(const char *compat);
