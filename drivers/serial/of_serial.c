@@ -86,7 +86,6 @@ static int __devinit of_platform_serial_probe(struct platform_device *ofdev,
 	struct uart_port port;
 	int port_type;
 	int ret;
-	int ids;
 
 	if (of_find_property(ofdev->dev.of_node, "used-by-rtas", NULL))
 		return -EBUSY;
@@ -99,21 +98,6 @@ static int __devinit of_platform_serial_probe(struct platform_device *ofdev,
 	ret = of_platform_serial_setup(ofdev, port_type, &port);
 	if (ret)
 		goto out;
-
-	ids = of_alias_get_id(ofdev->dev.of_node, "serial");
-	if (ids < 0) {
-		dev_warn(&ofdev->dev,
-				"failed to get serial alias for %d id\n", ids);
-	} else {
-		if (ids < CONFIG_SERIAL_8250_RUNTIME_UARTS)
-			port.line = ids;
-		else {
-			dev_warn(&ofdev->dev,
-				"FAILED to register serial driver with id %d\n",
-									ids);
-			goto out;
-		}
-	}
 
 	switch (port_type) {
 #ifdef CONFIG_SERIAL_8250

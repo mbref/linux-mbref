@@ -966,7 +966,7 @@ static void of_alias_add(struct alias_prop *ap, struct device_node *np,
  * @dt_alloc:	An allocator that provides a virtual address to memory
  *		for the resulting tree
  */
-void of_alias_scan(u64 (*dt_alloc)(u64 size, u64 align))
+void of_alias_scan(void * (*dt_alloc)(u64 size, u64 align))
 {
 	struct property *pp;
 
@@ -1004,7 +1004,7 @@ void of_alias_scan(u64 (*dt_alloc)(u64 size, u64 align))
 			continue;
 
 		/* Allocate an alias_prop with enough space for the stem */
-		ap = __va(dt_alloc(sizeof(*ap) + len + 1, 4));
+		ap = dt_alloc(sizeof(*ap) + len + 1, 4);
 		if (!ap)
 			continue;
 		ap->alias = start;
