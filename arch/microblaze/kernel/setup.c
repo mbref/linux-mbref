@@ -151,35 +151,35 @@ void __init machine_early_init(const char *cmdline, unsigned int ram,
 	/* setup kernel_tlb after BSS cleaning
 	 * Maybe worth to move to asm code */
 	kernel_tlb = tlb0 + tlb1;
-	/* eprintk("TLB1 0x%08x, TLB0 0x%08x, tlb 0x%x\n", tlb0,
+	/* printk("TLB1 0x%08x, TLB0 0x%08x, tlb 0x%x\n", tlb0,
 							tlb1, kernel_tlb); */
 
-	eprintk("Ramdisk addr 0x%08x, ", ram);
+	printk("Ramdisk addr 0x%08x, ", ram);
 	if (fdt)
-		eprintk("FDT at 0x%08x\n", fdt);
+		printk("FDT at 0x%08x\n", fdt);
 	else
-		eprintk("Compiled-in FDT at 0x%08x\n",
+		printk("Compiled-in FDT at 0x%08x\n",
 					(unsigned int)_fdt_start);
 
 #ifdef CONFIG_MTD_UCLINUX
-	eprintk("Found romfs @ 0x%08x (0x%08x)\n",
+	printk("Found romfs @ 0x%08x (0x%08x)\n",
 			romfs_base, romfs_size);
-	eprintk("#### klimit %p ####\n", old_klimit);
+	printk("#### klimit %p ####\n", old_klimit);
 	BUG_ON(romfs_size < 0); /* What else can we do? */
 
-	eprintk("Moved 0x%08x bytes from 0x%08x to 0x%08x\n",
+	printk("Moved 0x%08x bytes from 0x%08x to 0x%08x\n",
 			romfs_size, romfs_base, (unsigned)&_ebss);
 
-	eprintk("New klimit: 0x%08x\n", (unsigned)klimit);
+	printk("New klimit: 0x%08x\n", (unsigned)klimit);
 #endif
 
 #if CONFIG_XILINX_MICROBLAZE0_USE_MSR_INSTR
 	if (msr)
-		eprintk("!!!Your kernel has setup MSR instruction but "
+		printk("!!!Your kernel has setup MSR instruction but "
 				"CPU don't have it %x\n", msr);
 #else
 	if (!msr)
-		eprintk("!!!Your kernel not setup MSR instruction but "
+		printk("!!!Your kernel not setup MSR instruction but "
 				"CPU have it %x\n", msr);
 #endif
 
