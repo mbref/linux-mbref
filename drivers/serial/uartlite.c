@@ -580,8 +580,10 @@ static int __devinit ulite_probe(struct platform_device *pdev)
 		return -ENODEV;
 
 	res2 = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-	if (!res2)
+	if (!res2) {
+		dev_warn(&pdev->dev, "refusing to probe uart instance with no IRQ");
 		return -ENODEV;
+	}
 
 	return ulite_assign(&pdev->dev, pdev->id, res->start, res2->start);
 }
@@ -625,6 +627,7 @@ ulite_of_probe(struct platform_device *op, const struct of_device_id *match)
 
 	irq = irq_of_parse_and_map(op->dev.of_node, 0);
 	if (irq == -1) {
+		dev_warn(&op->dev, "refusing to probe uart instance with no IRQ");
 		return -ENODEV;
 	}
 
