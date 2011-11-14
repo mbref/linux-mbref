@@ -92,7 +92,6 @@ static inline int ___range_ok(unsigned long addr, unsigned long size)
 /*
  * Address is valid if:
  *  - "addr", "addr + size" and "size" are all below the limit
- * Also return 0 for size 0
  */
 static inline int access_ok(int type, const void __user *addr, unsigned long size)
 {
