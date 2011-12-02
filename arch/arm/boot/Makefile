@@ -47,7 +47,17 @@ INITRD_PHYS := $(initrd_phys-y)
 
 export ZRELADDR INITRD_PHYS PARAMS_PHYS
 
-targets := Image zImage xipImage bootpImage uImage
+targets := zImage Image xipImage bootpImage uImage zImage% uImage.% dtbImage% simpleImage.%
+
+# Where the DTS files live
+dtstree         := $(srctree)/$(src)/dts
+
+# Rule to build device tree blobs
+DTC = $(objtree)/scripts/dtc/dtc
+
+quiet_cmd_strip = STRIP   $@.elf
+	cmd_strip = $(STRIP) -K arm_start -K _end -K __log_buf \
+				-K _fdt_start vmlinux -o $@.elf
 
 ifeq ($(CONFIG_XIP_KERNEL),y)
 
@@ -77,6 +87,15 @@ $(obj)/zImage:	$(obj)/compressed/vmlinux FORCE
 	$(call if_changed,objcopy)
 	@echo '  Kernel: $@ is ready'
 
+$(obj)/simpleImage.%: vmlinux FORCE
+	$(call if_changed,strip)
+	$(call if_changed,objcopy)
+	@echo 'Kernel: $@ is ready' ' (#'`cat .version`')'
+
+$(obj)/zImage.%: $(obj)/compressed/vmlinux FORCE
+	$(call if_changed,objcopy)
+	@echo '  Kernel: $@ is ready'
+
 endif
 
 quiet_cmd_uimage = UIMAGE  $@
@@ -93,6 +112,10 @@ endif
 $(obj)/uImage: STARTADDR=$(LOADADDR)
 
 $(obj)/uImage:	$(obj)/zImage FORCE
+	$(call if_changed,uimage)
+	@echo '  Image $@ is ready'
+
+$(obj)/uImage.%: $(obj)/zImage FORCE
 	$(call if_changed,uimage)
 	@echo '  Image $@ is ready'
 
@@ -132,3 +155,5 @@ i:
 	$(obj)/Image System.map "$(INSTALL_PATH)"
 
 subdir-	    := bootp compressed
+
+clean-files += *.dtb simpleImage.* linux.bin.ub
