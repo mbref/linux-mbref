@@ -52,6 +52,7 @@ struct pt_regs {
 	microblaze_reg_t esr;
 	microblaze_reg_t fsr;
 	int pt_mode;
+	int syscfg;
 };
 
 #ifdef __KERNEL__
@@ -60,24 +61,67 @@ struct pt_regs {
 
 #define instruction_pointer(regs)	((regs)->pc)
 #define profile_pc(regs)		instruction_pointer(regs)
+#define user_stack_pointer(regs)  	((regs)->r1)
 
 static inline long regs_return_value(struct pt_regs *regs)
 {
 	return regs->r3;
 }
 
-#else /* __KERNEL__ */
+extern void show_regs(struct pt_regs *);
 
-/* pt_regs offsets used by gdbserver etc in ptrace syscalls */
-#define PT_GPR(n)	((n) * sizeof(microblaze_reg_t))
-#define PT_PC		(32 * sizeof(microblaze_reg_t))
-#define PT_MSR		(33 * sizeof(microblaze_reg_t))
-#define PT_EAR		(34 * sizeof(microblaze_reg_t))
-#define PT_ESR		(35 * sizeof(microblaze_reg_t))
-#define PT_FSR		(36 * sizeof(microblaze_reg_t))
-#define PT_KERNEL_MODE	(37 * sizeof(microblaze_reg_t))
+#define arch_has_single_step()  (1)
 
 #endif /* __KERNEL */
+
+/* pt_regs offsets used by gdbserver etc in ptrace syscalls */
+#ifndef PT_GPR
+  #define PT_GPR(n)		((n) * sizeof(microblaze_reg_t))
+#endif
+#ifndef PT_PC
+  #define PT_PC			(32 * sizeof(microblaze_reg_t))
+#endif
+#ifndef PT_MSR
+  #define PT_MSR		(33 * sizeof(microblaze_reg_t))
+#endif
+#ifndef PT_EAR
+  #define PT_EAR		(34 * sizeof(microblaze_reg_t))
+#endif
+#ifndef PT_ESR
+  #define PT_ESR		(35 * sizeof(microblaze_reg_t))
+#endif
+#ifndef PT_FSR
+  #define PT_FSR		(36 * sizeof(microblaze_reg_t))
+#endif
+#ifndef PT_KERNEL_MODE
+  #define PT_KERNEL_MODE	(37 * sizeof(microblaze_reg_t))
+#endif
+#ifndef PT_SYSCFG
+  #define PT_SYSCFG		(38 * sizeof(microblaze_reg_t))
+#endif
+
+/* used for single stepping */
+#define SYSCFG_SSSTEP		0x00000001
+
+/* Define these according to how they will be used from user
+ * applications, which will include /usr/include/sys/ptrace.h */
+/*
+ * Get or set a debug register. The first 16 are DABR registers and the
+ *  * second 16 are IABR registers.
+ *   */
+#define PTRACE_GET_DEBUGREG	25
+#define PTRACE_SET_DEBUGREG	26
+
+/* (new) PTRACE requests using the same numbers as x86 and the same
+ *  * argument ordering. Additionally, they support more registers too
+ * SHOULD MATCH /usr/include/linux/ptrace.h. */
+#define PTRACE_GETREGS		12
+#define PTRACE_SETREGS		13
+#define PTRACE_GETFPREGS	14
+#define PTRACE_SETFPREGS	15
+#define PTRACE_GETREGS64	22
+#define PTRACE_SETREGS64	23
+
 
 #endif /* __ASSEMBLY__ */
 

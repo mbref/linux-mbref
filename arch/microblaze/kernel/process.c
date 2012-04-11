@@ -226,7 +226,7 @@ int kernel_thread(int (*fn)(void *), void *arg, unsigned long flags)
 	local_save_flags(regs.msr);
 	regs.pc = (unsigned long)kernel_thread_helper;
 	regs.pt_mode = 1;
-
+        __asm__ __volatile__("%0 = syscfg;":"=da"(regs.syscfg):);
 	return do_fork(flags | CLONE_VM | CLONE_UNTRACED, 0,
 			&regs, 0, NULL, NULL);
 }

@@ -1,6 +1,7 @@
 /*
  * `ptrace' system call
  *
+ * Copyright (C) 2011 Billy Huang <billykhuang@gmail.com>
  * Copyright (C) 2008-2009 Michal Simek <monstr@monstr.eu>
  * Copyright (C) 2007-2009 PetaLogix
  * Copyright (C) 2004-2007 John Williams <john.williams@petalogix.com>
@@ -24,23 +25,31 @@
  * archive for more details.
  */
 
+#include <asm/asm-offsets.h>
+#include <asm/ptrace.h>
+#include <linux/ptrace.h>
+
 #include <linux/kernel.h>
 #include <linux/mm.h>
 #include <linux/sched.h>
-#include <linux/ptrace.h>
 #include <linux/signal.h>
 #include <linux/elf.h>
 #include <linux/audit.h>
 #include <linux/seccomp.h>
 #include <linux/tracehook.h>
+#include <linux/user.h>
+#include <linux/regset.h>
 
 #include <linux/errno.h>
 #include <asm/processor.h>
 #include <linux/uaccess.h>
-#include <asm/asm-offsets.h>
 #include <asm/cacheflush.h>
 #include <asm/syscall.h>
 #include <asm/io.h>
+
+#ifndef UTS_MACHINE
+#define UTS_MACHINE "microblaze"
+#endif
 
 /* Returns the address where the register at REG_OFFS in P is stashed away. */
 static microblaze_reg_t *reg_save_addr(unsigned reg_offs,
@@ -74,17 +83,133 @@ static microblaze_reg_t *reg_save_addr(unsigned reg_offs,
 	return (microblaze_reg_t *)((char *)regs + reg_offs);
 }
 
+/* Get the general purpose registers */
+static int gpr_get(struct task_struct *target, const struct user_regset *regset,
+		unsigned int pos, unsigned int count,
+		void *kbuf, void __user *ubuf)
+{
+	pr_debug("mb gpr_get: Get with count=%u\n", count);
+
+	struct pt_regs *regs = task_pt_regs(target);
+	int ret;
+
+	/* Everything gets read out */
+	ret = user_regset_copyout(&pos, &count, &kbuf, &ubuf,
+				regs, 0, PT_MSR);
+
+	return ret;
+}
+
+/* Set the general purpose registers */
+static int gpr_set(struct task_struct *target, const struct user_regset *regset,
+		unsigned int pos, unsigned int count,
+		const void *kbuf, const void __user *ubuf)
+{
+	pr_debug("mb gpr_set: Set with count=%u\n", count);
+
+	struct pt_regs *regs = task_pt_regs(target);
+	int ret;
+
+	ret = user_regset_copyin(&pos, &count, &kbuf, &ubuf,
+				regs, 0, PT_MSR);
+
+	return ret;
+
+}
+
+/*
+ *  * These are our native regset flavors.
+ *   */
+enum microblaze_regset {
+	REGSET_GPR,
+};
+
+static const struct user_regset native_regsets[] = {
+	[REGSET_GPR] = {
+		.core_note_type = NT_PRSTATUS,
+		/* .n = 33 (0-31 gpr, 32 pc) */
+		.n = ((PT_MSR)/sizeof(unsigned long)),
+		/* all registers are 32-bits for the Microblaze */
+		.size = sizeof(unsigned long),
+		.align = sizeof(unsigned long),
+		.get = gpr_get,
+		.set = gpr_set
+	},
+};
+
+static const struct user_regset_view user_microblaze_native_view = {
+	.name = UTS_MACHINE,
+	.e_machine = ELF_ARCH,
+	.ei_osabi = ELF_OSABI,
+	.regsets = native_regsets,
+	.n = ARRAY_SIZE(native_regsets)
+};
+
+/*
+ * NOTE:
+ * Single stepping has been enabled in a basic form.
+ *
+ * FIXME???:
+ * You'll notice I haven't entered any code in entry.S to check the syscfg flag
+ * in kernel mode,  so perhaps some dangerous stuff could happen if trying to 
+ * debug the kernel although I'm not completely sure - I haven't tested this.
+ * All I know is that now GDB works natively on the microblaze, with breakpoints
+ * and single stepping for a normal user program, and so have stopped coding
+ * at this point.
+ *
+ * A general description for single stepping is this:
+ *
+ * GDB calls a breakpoint, initiating a SIGTRAP (breakpoint defined in
+ * microblaze-tdep.h #define MICROBLAZE_BREAKPOINT {0xb9, 0xcc, 0x00, 0x60}),
+ * This is handled in entry.S.
+ *
+ * Then what happens is a bit of a mystery:
+ *
+ * I think GDB executes the single command.
+ * Then does ptrace (request=PTRACE_SINGLESTEP) is called.
+ * This goes to kernel/ptrace.c which calls the arch/microblaze/kernel/ptrace.c,
+ * (assuming you have added the appropriate #defines in arch/microblaze/include/asm/ptrace.h)
+ * This sets TIF_SINGLESTEP (see user_enable_single_step below), and the pt_regs->syscfg
+ * 
+ * The the program being debugged (child) is resumed for an insruction.
+ *
+ * ~ Billy Huang.
+ */
+
+/* copied from arch/blackfin */
+void user_enable_single_step(struct task_struct *child)
+{
+	struct pt_regs *regs = task_pt_regs(child);
+	regs->syscfg |= SYSCFG_SSSTEP;  /* turn on bit */
+
+	set_tsk_thread_flag(child, TIF_SINGLESTEP);
+}
+
+/* copied from arch/blackfin */
+void user_disable_single_step(struct task_struct *child)
+{
+	struct pt_regs *regs = task_pt_regs(child);
+	regs->syscfg &= ~SYSCFG_SSSTEP; /* turn off bit */
+
+	clear_tsk_thread_flag(child, TIF_SINGLESTEP);
+}
+
 long arch_ptrace(struct task_struct *child, long request,
 		 unsigned long addr, unsigned long data)
 {
 	int rval;
+
 	unsigned long val = 0;
+
+	pr_debug("mb arch_ptrace: Request Value: %ld\n", request);
+	pr_debug("mb arch_ptrace: Address : 0x%08lx\n", addr);
+	pr_debug("mb arch_ptrace: Data : 0x%08lx\n", data);
 
 	switch (request) {
 	/* Read/write the word at location ADDR in the registers. */
 	case PTRACE_PEEKUSR:
 	case PTRACE_POKEUSR:
-		pr_debug("PEEKUSR/POKEUSR : 0x%08lx\n", addr);
+		pr_debug("mb arch_ptrace: PEEKUSR/POKEUSR\n");
 		rval = 0;
 		if (addr >= PT_SIZE && request == PTRACE_PEEKUSR) {
 			/*
@@ -107,6 +232,7 @@ long arch_ptrace(struct task_struct *child, long request,
 				val = *reg_addr;
 			else {
 #if 1
+				/* now we're poking... */
 				*reg_addr = data;
 #else
 				/* MS potential problem on WB system
@@ -126,8 +252,44 @@ long arch_ptrace(struct task_struct *child, long request,
 		if (rval == 0 && request == PTRACE_PEEKUSR)
 			rval = put_user(val, (unsigned long __user *)data);
 		break;
+/* Doesn't work TO_REMOVE. These are standard ptrace defined routines,
+ * so not defining here. See kernel/ptrace.c for more details on the
+ * general routines. ~BH */
+#if 0
+	case PTRACE_PEEKDATA:
+	case PTRACE_PEEKTEXT:	/* read word at location addr. */
+	case PTRACE_POKEDATA:
+	case PTRACE_POKETEXT:	/* write the word at location addr. */
+#endif
+	case PTRACE_GETREGS:
+		pr_debug("mb arch_ptrace: PTRACE_GETREGS\n");
+		rval = copy_regset_to_user(child, &user_microblaze_native_view,
+					REGSET_GPR,
+					0, PT_MSR,
+					(void __user *) data);
+		pr_debug("mb arch_ptrace: PTRACE_GETREGS rval %d\n", rval);
+		break;
+        case PTRACE_SETREGS:    /* Set all gp regs in the child. */
+		pr_debug("mb arch_ptrace: PTRACE_SETREGS\n");
+		rval = copy_regset_from_user(child, &user_microblaze_native_view,
+					REGSET_GPR,
+					0, PT_MSR,
+					(const void __user *) data);
+		pr_debug("mb arch_ptrace: PTRACE_SETREGS rval %d\n", rval);
+		break;
+        case PTRACE_SINGLESTEP:
+		/* Enforce a continuation instead of single-step */
+		/* request = PTRACE_CONT; // Removed as single-step now working! :-) */
+		rval = ptrace_request(child, request, addr, data);
+		break;
 	default:
 		rval = ptrace_request(child, request, addr, data);
+		if (request == PTRACE_POKEDATA)
+			pr_debug("mb arch_ptrace: PTRACE_POKEDATA (unsupported) rval %d\n", rval);
+		if (request == PTRACE_CONT)
+			pr_debug("mb arch_ptrace: PTRACE_CONT (unsupported) rval %d\n", rval);
+		if (request == PTRACE_SINGLESTEP)
+			pr_debug("mb arch_ptrace: PTRACE_SINGLESTEP (unsupported) rval %d\n", rval);
 	}
 	return rval;
 }
