@@ -28,7 +28,9 @@
 #define ULITE_NAME		"ttyUL"
 #define ULITE_MAJOR		204
 #define ULITE_MINOR		187
-#define ULITE_NR_UARTS		10
+#define ULITE_NR_UARTS		CONFIG_SERIAL_UARTLITE_NR_UARTS
+
+static unsigned int nr_uarts = CONFIG_SERIAL_UARTLITE_RUNTIME_UARTS;
 
 /* ---------------------------------------------------------------------
  * Register definitions
@@ -416,7 +418,7 @@ static int __devinit ulite_console_setup(struct console *co, char *options)
 	int parity = 'n';
 	int flow = 'n';
 
-	if (co->index < 0 || co->index >= ULITE_NR_UARTS)
+	if (co->index < 0 || co->index >= nr_uarts)
 		return -EINVAL;
 
 	port = &ulite_ports[co->index];
@@ -453,6 +455,9 @@ static struct console ulite_console = {
 
 static int __init ulite_console_init(void)
 {
+	if (nr_uarts > ULITE_NR_UARTS)
+		nr_uarts = ULITE_NR_UARTS;
+
 	register_console(&ulite_console);
 	return 0;
 }
@@ -493,11 +498,11 @@ static int __devinit ulite_assign(struct device *dev, int id, u32 base, int irq)
 
 	/* if id = -1; then scan for a free id and use that */
 	if (id < 0) {
-		for (id = 0; id < ULITE_NR_UARTS; id++)
+		for (id = 0; id < nr_uarts; id++)
 			if (ulite_ports[id].mapbase == 0)
 				break;
 	}
-	if (id < 0 || id >= ULITE_NR_UARTS) {
+	if (id < 0 || id >= nr_uarts) {
 		dev_err(dev, "%s%i too large\n", ULITE_NAME, id);
 		return -EINVAL;
 	}
@@ -636,6 +641,9 @@ int __init ulite_init(void)
 {
 	int ret;
 
+	if (nr_uarts > ULITE_NR_UARTS)
+		nr_uarts = ULITE_NR_UARTS;
+
 	pr_debug("uartlite: calling uart_register_driver()\n");
 	ret = uart_register_driver(&ulite_uart_driver);
 	if (ret)
@@ -667,3 +675,5 @@ module_exit(ulite_exit);
 MODULE_AUTHOR("Peter Korsgaard <jacmet@sunsite.dk>");
 MODULE_DESCRIPTION("Xilinx uartlite serial driver");
 MODULE_LICENSE("GPL");
+
+module_param(nr_uarts, uint, 0644);
