@@ -28,6 +28,7 @@ void of_platform_reset_gpio_probe(void)
 	if (!gpio_is_valid(handle)) {
 		printk(KERN_INFO "Skipping unavailable RESET gpio %d (%s)\n",
 				handle, "reset");
+		return;
 	}
 
 	ret = gpio_request(handle, "reset");
@@ -60,7 +61,10 @@ err:
 
 static void gpio_system_reset(void)
 {
-	gpio_set_value(handle, 1 - reset_val);
+	if (gpio_is_valid(handle))
+		gpio_set_value(handle, 1 - reset_val);
+	else
+		printk(KERN_NOTICE "Reset GPIO unavailable - halting!\n");
 }
 #else
 static void gpio_system_reset(void)
