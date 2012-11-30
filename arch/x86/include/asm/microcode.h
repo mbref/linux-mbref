@@ -57,4 +57,27 @@ static inline struct microcode_ops * __init init_amd_microcode(void)
 static inline void __exit exit_amd_microcode(void) {}
 #endif
 
+struct mc_saved_data {
+	unsigned int mc_saved_count;
+	struct microcode_intel **mc_saved;
+	struct ucode_cpu_info *ucode_cpu_info;
+};
+#ifdef CONFIG_MICROCODE_EARLY
+#define MAX_UCODE_COUNT 128
+extern struct ucode_cpu_info ucode_cpu_info_early[NR_CPUS];
+extern struct microcode_intel __initdata *mc_saved_in_initrd[MAX_UCODE_COUNT];
+extern struct mc_saved_data mc_saved_data;
+extern void __init load_ucode_bsp(char *real_mode_data);
+extern __init void load_ucode_ap(void);
+extern void __init
+save_microcode_in_initrd(struct mc_saved_data *mc_saved_data,
+			 struct microcode_intel **mc_saved_in_initrd);
+#else
+static inline void __init load_ucode_bsp(char *real_mode_data) {}
+static inline __init void load_ucode_ap(void) {}
+static inline void __init
+save_microcode_in_initrd(struct mc_saved_data *mc_saved_data,
+			 struct microcode_intel **mc_saved_in_initrd) {}
+#endif
+
 #endif /* _ASM_X86_MICROCODE_H */
