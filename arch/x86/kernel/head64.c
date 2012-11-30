@@ -25,6 +25,7 @@
 #include <asm/kdebug.h>
 #include <asm/e820.h>
 #include <asm/bios_ebda.h>
+#include <asm/microcode.h>
 
 static void __init zap_identity_mappings(void)
 {
@@ -72,6 +73,11 @@ void __init x86_64_start_kernel(char * real_mode_data)
 
 	/* clear bss before set_intr_gate with early_idt_handler */
 	clear_bss();
+
+	/*
+	 * Load microcode early on BSP.
+	 */
+	load_ucode_bsp(real_mode_data);
 
 	/* Make NULL pointers segfault */
 	zap_identity_mappings();
