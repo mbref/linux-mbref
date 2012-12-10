@@ -1,0 +1,33 @@
+Importing i2c based on 2844a48706e54ddda4a04269dba4250b42f449de
+Unchanged quilt series i2c
+Importing jdelvare-hwmon based on 2844a48706e54ddda4a04269dba4250b42f449de
+Unchanged quilt series jdelvare-hwmon
+Importing device-mapper based on v3.7-rc8
+$ git clone -s -l -n -q . ../quilt-tmp
+$ cd ../quilt-tmp
+$ git reset --hard b69f0859dc8e633c5d8c06845811588fe17e68b3
+HEAD is now at b69f085 Linux 3.7-rc8
+$ git am ../quilt/device-mapper/dm-persistent-data-rename-node-to-btree_node.patch
+Applying: This patch fixes a compilation failure on sparc32 by renaming struct node.
+$ git am ../quilt/device-mapper/dm-ioctl-prevent-unsafe-change-to-dm_ioctl-data_size.patch
+Applying: Abort dm ioctl processing if userspace changes the data_size parameter
+$ git am ../quilt/device-mapper/dm-raid1-remove-impossible-mempool_alloc-error-test.patch
+Applying: mempool_alloc can't fail if __GFP_WAIT is specified, so the condition
+$ git am ../quilt/device-mapper/dm-raid-use-DM_ENDIO_INCOMPLETE.patch
+Applying: Use a defined macro DM_ENDIO_INCOMPLETE instead of a numeric constant.
+$ git am ../quilt/device-mapper/dm-snap-optimize-track_chunk.patch
+Applying: track_chunk is always called with interrupts enabled. Consequently, we
+$ git am ../quilt/device-mapper/dm-block-manager-reinstate-message-when-validator-fails.patch
+Applying: Reinstate a useful error message when the block manager buffer validator fails.
+$ git am ../quilt/device-mapper/dm-persistent-data-use-DMERR_LIMIT-for-errors.patch
+Applying: Nearly all of persistent-data is in the IO path so throttle error
+$ git am ../quilt/device-mapper/dm-thin-use-DMERR_LIMIT-for-errors.patch
+Applying: Throttle all errors logged from the IO path by dm thin.
+$ git am ../quilt/device-mapper/dm-ioctl-remove-PF_MEMALLOC.patch
+Applying: When allocating memory for the userspace ioctl data, set some
+$ git am ../quilt/device-mapper/dm-ioctl-use-kmalloc-if-possible.patch
+Applying: If the parameter buffer is small enough, try to allocate it with kmalloc()
+$ cd /home/sfr/kernels/next/next
+$ git fetch -f ../quilt-tmp master:device-mapper/master
+From ../quilt-tmp
+ + cee3685...3b96221 master     -> device-mapper/master  (forced update)
