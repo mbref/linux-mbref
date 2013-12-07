@@ -54,6 +54,14 @@ choice
 	depends on XILINX_LLTEMAC
 	default XILINX_LLTEMAC_MARVELL_88E1111_GMII
 
+config XILINX_LLTEMAC_NATIONAL_DP83865_GMII
+	bool "NATIONAL DP83865 using GMII"
+   help
+	  This phy is used by some Xilinx boards.  This option includes
+	  code for enabling GMII over copper, and for setting the correct
+	  speed based on whatever the phy is able to autonegotiate.  This is
+	  usually the best option to use on SP3ADSP1800 boards.
+
 config XILINX_LLTEMAC_MARVELL_88E1111_RGMII
 	bool "MARVELL 88E1111 using RGMII"
    help
