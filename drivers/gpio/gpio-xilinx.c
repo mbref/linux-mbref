@@ -53,6 +53,7 @@
  * @mmchip: OF GPIO chip for memory mapped banks
  * @gpio_state: GPIO state shadow register
  * @gpio_dir: GPIO direction shadow register
+ * @gpio_width: GPIO width shadow register
  * @offset: GPIO channel offset
  * @irq_base: GPIO channel irq base address
  * @irq_enable: GPIO irq enable/disable bitfield
@@ -63,6 +64,7 @@ struct xgpio_instance {
 	struct of_mm_gpio_chip mmchip;
 	u32 gpio_state;
 	u32 gpio_dir;
+	u32 gpio_width;
 	u32 offset;
 	int irq_base;
 	u32 irq_enable;
@@ -460,11 +462,11 @@ static int xgpio_of_probe(struct platform_device *pdev)
 	of_property_read_u32(np, "xlnx,tri-default", &chip->gpio_dir);
 
 	/* By default assume full GPIO controller */
-	chip->mmchip.gc.ngpio = 32;
+	chip->gpio_width = 32;
 
-	/* Check device node and parent device node for device width */
-	of_property_read_u32(np, "xlnx,gpio-width",
-			      (u32 *)&chip->mmchip.gc.ngpio);
+	/* Check device node for device width */
+	of_property_read_u32(np, "xlnx,gpio-width", &chip->gpio_width);
+	chip->mmchip.gc.ngpio = (u16)chip->gpio_width;
 
 	spin_lock_init(&chip->gpio_lock);
 
@@ -513,11 +515,11 @@ static int xgpio_of_probe(struct platform_device *pdev)
 		of_property_read_u32(np, "xlnx,tri-default-2", &chip->gpio_dir);
 
 		/* By default assume full GPIO controller */
-		chip->mmchip.gc.ngpio = 32;
+		chip->gpio_width = 32;
 
-		/* Check device node and parent device node for device width */
-		of_property_read_u32(np, "xlnx,gpio2-width",
-				     (u32 *)&chip->mmchip.gc.ngpio);
+		/* Check device node for device width */
+		of_property_read_u32(np, "xlnx,gpio2-width", &chip->gpio_width);
+		chip->mmchip.gc.ngpio = (u16)chip->gpio_width;
 
 		spin_lock_init(&chip->gpio_lock);
 
